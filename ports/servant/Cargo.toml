@@ -11,9 +11,10 @@ name = "servant"
 path = "src/main.rs"
 
 [dependencies]
-servo = { path = "../../components/servo" }
-net = { path = "../../components/net" }
-net_traits = { path = "../../components/shared/net" }
+servo = { workspace = true }
+net = { workspace = true }
+net_traits = { workspace = true }
+http = { workspace = true }
 ant-core = { path = "../../../ant-client/ant-core" }
 tokio = { workspace = true, features = ["full"] }
 url = { workspace = true }

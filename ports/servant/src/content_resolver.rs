@@ -80,7 +80,8 @@ impl ContentResolver {
         } else if data.iter().take(512).any(|&b| b == 0) {
             "application/octet-stream".to_string()
         } else {
-            let s = String::from_utf8_lossy(&data.iter().take(512).cloned().collect::<Vec<u8>>());
+            let sample_vec: Vec<u8> = data.iter().take(512).cloned().collect();
+            let s = String::from_utf8_lossy(&sample_vec);
             if s.contains("<html") || s.contains("<!DOCTYPE html") {
                 "text/html".to_string()
             } else {

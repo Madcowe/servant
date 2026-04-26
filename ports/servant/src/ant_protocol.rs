@@ -43,7 +43,7 @@ impl ProtocolHandler for AntProtocolHandler {
         }
 
         Box::pin(async move {
-            let ant_url = match AntUrl::parse(&url) {
+            let ant_url = match AntUrl::parse(url.as_url()) {
                 Ok(u) => u,
                 Err(e) => {
                     return Response::network_error(NetworkError::ResourceLoadError(
