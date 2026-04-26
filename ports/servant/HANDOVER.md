@@ -29,24 +29,48 @@ During integration, building the `servant` binary failed with `rust-lld: error: 
 **Cause:**
 *   `ant-core` -> `self_encryption` depends on `brotli` v3.3, which pulls `brotli-decompressor v2.3.5`.
 *   `servo` -> `servo-net` -> `async-compression` depends on `brotli` v8.0, which pulls `brotli-decompressor v5.0.0`.
-*   Both crate versions unconditionally exported the same `#[no_mangle]` C FFI functions. When the linker attempted to build the final binary, it encountered identical symbols, failing the build.
+*   Both crate versions unconditionally exported the same `#[no_mangle]` C FFI functions.
 
 **The Fix:**
-Because Cargo cannot namespace C-exports across different versions of the same crate, the fix was applied directly to the local Cargo registry cache. The `ffi` module was removed from the older v2.3.5, stopping it from exporting the symbols, while allowing v5.0.0 to fulfill the linkage for Servo's C++ font engine (`fontsan_woff2`).
-
-**How to re-apply if the cache is cleared/updated:**
-If you encounter this error again on a fresh clone or after a `cargo update`, run the following in your terminal:
+The fix was applied directly to the local Cargo registry cache. The `ffi` module was removed from the older v2.3.5, stopping it from exporting the symbols.
 ```bash
 sed -i 's/pub mod ffi;/\/\/pub mod ffi;/g' ~/.cargo/registry/src/*/brotli-decompressor-2.3.5/src/lib.rs
 cargo clean -p brotli-decompressor
 cargo build -p servant
 ```
 
+### 2. `InsufficientPeers` and Network Connectivity
+Initially, the browser failed to fetch content with `Error: InsufficientPeers("DHT returned no peers for target address")`.
+
+**Cause:**
+1.  **Missing Bootstrap Peers:** The client was starting with an empty bootstrap list, expecting the SDK to have defaults (which it does not).
+2.  **IPv6 / Timeout Issues:** Standard library defaults were too aggressive for the P2P network on certain local networks.
+
+**The Fix:**
+*   Implemented prioritized bootstrap resolution: CLI `--bootstrap-peers` > `--devnet-manifest` > `~/.config/ant/bootstrap_peers.toml` > Hardcoded mainnet defaults.
+*   Forced **IPv4-only mode** and increased network operation timeouts to **60 seconds** to match the behavior of working Autonomi CLI utilities.
+
+### 3. Autonomi Runtime Lifecycle (Instant Fetch Failure)
+Even with peers, fetches were failing instantly (~80ms).
+
+**Cause:**
+The Autonomi client runs on its own background `tokio::runtime::Runtime`. In the initial design, the manager owning this runtime was created in a temporary closure and dropped immediately after registration. This killed the background DHT and networking threads.
+
+**The Fix:**
+Modified `AntProtocolHandler` to hold an `Arc<AntClientManager>`. This ensures the background runtime stays alive for the entire duration of the browser session.
+
 ## Running the Project
-Because `./mach run` hardcodes the execution of `servoshell`, you must run the Servant wrapper binary directly via Cargo to ensure the `ant://` protocol is active:
+The Servant binary now supports standard Autonomi CLI arguments:
 
 ```bash
+# Run with hardcoded mainnet defaults
 cargo run -p servant
+
+# Run with a custom devnet manifest
+cargo run -p servant -- --devnet-manifest /path/to/devnet.json
+
+# Run with explicit bootstrap peers
+cargo run -p servant -- --bootstrap-peers 1.2.3.4:10000,5.6.7.8:10000
 ```
 Alternatively, build with Mach and execute manually:
 ```bash

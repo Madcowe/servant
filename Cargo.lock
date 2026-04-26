@@ -10510,6 +10510,7 @@ version = "0.1.0"
 dependencies = [
  "ant-core",
  "bytes",
+ "clap",
  "env_logger",
  "futures",
  "hex 0.4.3",
@@ -10523,6 +10524,7 @@ dependencies = [
  "servo-net-traits",
  "servoshell",
  "tokio",
+ "toml",
  "url",
 ]
 

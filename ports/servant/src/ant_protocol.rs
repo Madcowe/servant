@@ -12,17 +12,21 @@ use net::fetch::methods::{DoneChannel, FetchContext};
 use crate::ant_url::AntUrl;
 use crate::content_resolver::{ContentResolver, ResolvedContent};
 use crate::settings::SettingsUi;
+use crate::ant_client::AntClientManager;
+use std::sync::Arc;
 
 pub struct AntProtocolHandler {
     resolver: ContentResolver,
     settings_ui: SettingsUi,
+    _manager: Arc<AntClientManager>,
 }
 
 impl AntProtocolHandler {
-    pub fn new(resolver: ContentResolver) -> Self {
+    pub fn new(resolver: ContentResolver, manager: Arc<AntClientManager>) -> Self {
         Self { 
             resolver,
             settings_ui: SettingsUi::new(),
+            _manager: manager,
         }
     }
 }

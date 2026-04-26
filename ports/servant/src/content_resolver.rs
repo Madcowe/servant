@@ -3,6 +3,7 @@ use bytes::Bytes;
 use ant_core::data::client::Client;
 use crate::cache::ContentCache;
 use crate::loading::LoadingTracker;
+use hex;
 
 #[derive(Clone)]
 pub enum ResolvedContent {
@@ -55,19 +56,27 @@ impl ContentResolver {
             return Ok((*cached).clone());
         }
 
+        println!("Resolving ant://{} ...", hex::encode(address));
         let tracker = LoadingTracker::start();
 
         let data_map = self.client.data_map_fetch(address).await
             .map_err(|e| {
-                tracker.error(&e.to_string());
-                ResolveError::NetworkError(e.to_string())
+                let err_msg = e.to_string();
+                println!("❌ Failed to fetch DataMap: {}", err_msg);
+                tracker.error(&err_msg);
+                ResolveError::NetworkError(err_msg)
             })?;
 
+        println!("Found DataMap, downloading chunks...");
         let data = self.client.data_download(&data_map).await
             .map_err(|e| {
-                tracker.error(&e.to_string());
-                ResolveError::NetworkError(e.to_string())
+                let err_msg = e.to_string();
+                println!("❌ Failed to download chunks: {}", err_msg);
+                tracker.error(&err_msg);
+                ResolveError::NetworkError(err_msg)
             })?;
+
+        println!("✅ Download complete ({} bytes). Sniffing MIME type...", data.len());
 
         tracker.finish(data.len());
 
