@@ -1,0 +1,14 @@
+_category_	_incremental?_	_iframe?_	_url_	_mean (ms)_	_median (ms)_	_min (ms)_	_max (ms)_	_events_
+Painting	     N/A	  N/A	             N/A	         0.5179	         0.3718	         0.0105	        12.0411	            201
+Layout	 yes	yes	ant://3387bb85853e2583b92da167cce3fd46dff574ff7fe8f85d02c1f65d54535c44	         0.0086	         0.0108	         0.0063	         0.0108	              2
+Layout	 no	yes	ant://3387bb85853e2583b92da167cce3fd46dff574ff7fe8f85d02c1f65d54535c44	         5.2735	         5.2735	         5.2735	         5.2735	              1
+Layout	 yes	yes	https://servo.org/	         3.8668	         0.0033	         0.0012	       246.8162	            110
+Layout	 no	yes	https://servo.org/	        36.8339	        36.8339	        36.8339	        36.8339	              1
+ScriptParseHTML	 no	yes	ant://3387bb85853e2583b92da167cce3fd46dff574ff7fe8f85d02c1f65d54535c44	         1.5779	         1.5779	         1.5779	         1.5779	              1
+ScriptParseHTML	 no	yes	https://servo.org/	         6.6867	         0.3869	         0.1268	        33.3155	              7
+TimeToFirstPaint	 no	yes	ant://3387bb85853e2583b92da167cce3fd46dff574ff7fe8f85d02c1f65d54535c44	         0.0000	         0.0000	         0.0000	         0.0000	              1
+TimeToFirstPaint	 no	yes	https://servo.org/	         0.0000	         0.0000	         0.0000	         0.0000	              1
+TimeToFirstContentfulPaint	 no	yes	ant://3387bb85853e2583b92da167cce3fd46dff574ff7fe8f85d02c1f65d54535c44	         0.0000	         0.0000	         0.0000	         0.0000	              1
+TimeToFirstContentfulPaint	 no	yes	https://servo.org/	         0.0000	         0.0000	         0.0000	         0.0000	              1
+TimeToInteractive	 no	yes	https://servo.org/	         0.0000	         0.0000	         0.0000	         0.0000	              1
+_url	_blocked layout queries_

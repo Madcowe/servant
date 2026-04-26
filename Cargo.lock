@@ -10521,6 +10521,7 @@ dependencies = [
  "servo",
  "servo-net",
  "servo-net-traits",
+ "servoshell",
  "tokio",
  "url",
 ]

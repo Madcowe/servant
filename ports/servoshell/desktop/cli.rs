@@ -10,6 +10,13 @@ use crate::panic_hook;
 use crate::prefs::{ArgumentParsingResult, parse_command_line_arguments};
 
 pub fn main() {
+    main_with_protocols(|_| {})
+}
+
+pub fn main_with_protocols<F>(register_protocols: F)
+where
+    F: FnOnce(&mut servo::protocol_handler::ProtocolRegistry) + 'static,
+{
     crate::crash_handler::install();
     crate::init_crypto();
 
@@ -41,7 +48,7 @@ pub fn main() {
     };
 
     {
-        let mut app = App::new(opts, preferences, servoshell_preferences, &event_loop);
+        let mut app = App::new(opts, preferences, servoshell_preferences, &event_loop, register_protocols);
         event_loop.run_app(&mut app);
     }
 

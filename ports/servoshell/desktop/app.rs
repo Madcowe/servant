@@ -45,15 +45,20 @@ pub struct App {
     t_start: Instant,
     t: Instant,
     state: AppState,
+    register_protocols: Option<Box<dyn FnOnce(&mut ProtocolRegistry)>>,
 }
 
 impl App {
-    pub fn new(
+    pub fn new<F>(
         opts: Opts,
         preferences: Preferences,
         servo_shell_preferences: ServoShellPreferences,
         event_loop: &ServoShellEventLoop,
-    ) -> Self {
+        register_protocols: F,
+    ) -> Self
+    where
+        F: FnOnce(&mut ProtocolRegistry) + 'static,
+    {
         let initial_url = get_default_url(
             servo_shell_preferences.url.as_deref(),
             env::current_dir().unwrap(),
@@ -72,6 +77,7 @@ impl App {
             t_start: t,
             t,
             state: AppState::Initializing,
+            register_protocols: Some(Box::new(register_protocols)),
         }
     }
 
@@ -88,6 +94,10 @@ impl App {
             "resource",
             protocols::resource::ResourceProtocolHandler::default(),
         );
+
+        if let Some(register) = self.register_protocols.take() {
+            register(&mut protocol_registry);
+        }
 
         let servo_builder = ServoBuilder::default()
             .opts(self.opts.clone())
