@@ -1,0 +1,27 @@
+[package]
+name = "servant"
+version = "0.1.0"
+edition = "2024"
+description = "Autonomi-enabled web browser based on Servo"
+license = "MPL-2.0"
+publish = false
+
+[[bin]]
+name = "servant"
+path = "src/main.rs"
+
+[dependencies]
+servo = { path = "../../components/servo" }
+net = { path = "../../components/net" }
+net_traits = { path = "../../components/shared/net" }
+ant-core = { path = "../../../ant-client/ant-core" }
+tokio = { workspace = true, features = ["full"] }
+url = { workspace = true }
+log = "0.4"
+env_logger = "0.11"
+hex = "0.4"
+bytes = { workspace = true }
+mime_guess = "2.0.4"
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+futures = "0.3"

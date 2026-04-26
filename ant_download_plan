@@ -1,0 +1,110 @@
+ Planning Prompt (for Claude)
+Goal
+Plan the design and implementation of a pure Rust application that can upload and download Autonomi data given only an address, without requiring any daemon. The application must correctly handle files and directories, automatically determining what the address represents.
+Core Constraints
+
+    ✅ Use ant-core directly (daemon‑free)
+    ❌ Do not depend on any local daemon or REST/gRPC gateway
+    ✅ Treat all Autonomi addresses as opaque content identifiers
+    ✅ The application must infer content type from downloaded data, not from the address itself
+
+Key Architectural Principles
+
+    The Autonomi network stores immutable byte blobs
+        Addresses do not encode whether content is a file, directory, or chunk
+        All higher‑level meaning is a client‑side interpretation
+    Directories are a client‑side convention
+        A directory is represented as:
+            many independent file uploads (each with its own address)
+            plus a directory manifest (structured data blob)
+        The directory manifest itself is uploaded as ordinary data and has its own address
+    ant-core provides only primitives
+        upload bytes → address
+        download address → bytes
+        handling chunking, encryption, and payment
+        It has no concept of files or directories
+
+Required Download Behavior
+Given an address:
+
+    Download raw bytes using ant-core
+    Attempt to parse bytes as a directory manifest (known schema + version)
+    If parsing succeeds:
+        treat as a directory
+        create directories
+        download referenced files recursively by address
+    If parsing fails:
+        treat content as a normal file payload
+        materialize bytes directly (e.g. write to disk or stream)
+
+There is no metadata lookup or out‑of‑band type registry.
+Required Upload Behavior
+When given a filesystem path:
+
+    If the path is a file
+        upload bytes directly via ant-core
+        return resulting address
+    If the path is a directory
+        recursively walk the directory
+        upload each file independently
+        record:
+            relative path
+            file size
+            file address
+        build a directory manifest
+        serialize deterministically (e.g. CBOR / MessagePack / JSON)
+        upload the manifest via ant-core
+        return the manifest address
+
+Recommended Code Structure
+Design a directory abstraction layer above ant-core:
+
+ant-directory/
+├── manifest.rs    // schema + versioning + (de)serialization
+├── upload.rs      // directory → manifest → address
+├── download.rs    // address → detect → materialize
+├── walk.rs        // filesystem traversal
+└── lib.rs
+
+The main application depends on:
+
+    ant-core
+    this directory helper crate
+
+Manifest Requirements
+
+    Explicit version field (e.g. version: 1)
+    Relative paths only
+    Deterministic serialization
+    Backward‑compatible parsing strategy
+
+Example conceptual fields:
+
+    path
+    entry type (file / dir)
+    size (files)
+    address (files)
+
+Long‑Term Alignment Strategy
+
+    Follow the daemon‑free client behavior used by Autonomi tooling
+    Do not rely on any daemon‑specific APIs or assumptions
+    Keep directory logic fully deterministic and content‑driven
+    Treat “directory” as one interpretation of downloaded bytes, never as a network‑level construct
+
+What to Produce
+Please produce:
+
+    A high‑level architecture diagram or explanation
+    A proposed directory manifest v1 schema
+    Upload and download flow descriptions
+    Error‑handling strategy for:
+        unsupported manifest versions
+        partial downloads
+        malformed data
+    Suggested public Rust API (e.g. download_any(address))
+
+Key Design Maxim
+
+    Everything is bytes on the network.
+    Files and directories are client‑side meaning layered on top.

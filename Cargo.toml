@@ -4,9 +4,10 @@ members = [
     "components/media/examples",
     "components/xpath",
     "ports/servoshell",
+    "ports/servant",
     "tests/unit/*",
 ]
-default-members = ["ports/servoshell"]
+default-members = ["ports/servoshell", "ports/servant"]
 exclude = [".cargo", "support/crown"]
 
 [workspace.package]
