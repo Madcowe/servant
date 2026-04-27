@@ -6,15 +6,15 @@ pub struct LoadingTracker {
 
 impl LoadingTracker {
     pub fn start() -> Self {
-        log::info!("Starting network fetch from Autonomi...");
+        println!("🚀 Starting network fetch from Autonomi...");
         Self { start: Instant::now() }
     }
 
     pub fn finish(&self, bytes: usize) {
-        log::info!("Fetch complete! {} bytes loaded in {:?}", bytes, self.start.elapsed());
+        println!("✅ Fetch complete! {} bytes loaded in {:?}", bytes, self.start.elapsed());
     }
 
     pub fn error(&self, err: &str) {
-        log::error!("Fetch failed after {:?}: {}", self.start.elapsed(), err);
+        println!("❌ Fetch failed after {:?}: {}", self.start.elapsed(), err);
     }
 }

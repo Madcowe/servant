@@ -10,9 +10,8 @@ pub enum ResolvedContent {
     /// A single file retrieved via DataMap.
     SingleFile { data: Bytes, mime: String },
 
-    // Future variants:
-    // Directory { manifest: DirectoryManifest },
-    // RawChunk { data: Bytes, mime: String },
+    /// A single raw chunk.
+    RawChunk { data: Bytes, mime: String },
 }
 
 #[derive(Debug)]
@@ -44,10 +43,14 @@ impl ContentResolver {
         Self { client, cache }
     }
 
+    pub fn clear_cache(&self) {
+        println!("Clearing content cache...");
+        self.cache.clear();
+    }
+
     pub async fn resolve(&self, address: &[u8; 32], sub_path: Option<&str>) -> Result<ResolvedContent, ResolveError> {
         if let Some(path) = sub_path {
             if !path.is_empty() {
-                // For now, no sub-path (directory) support
                 return Err(ResolveError::NotFound("Directory support coming soon".to_string()));
             }
         }
@@ -59,34 +62,102 @@ impl ContentResolver {
         println!("Resolving ant://{} ...", hex::encode(address));
         let tracker = LoadingTracker::start();
 
-        let data_map = self.client.data_map_fetch(address).await
-            .map_err(|e| {
-                let err_msg = e.to_string();
-                println!("❌ Failed to fetch DataMap: {}", err_msg);
-                tracker.error(&err_msg);
-                ResolveError::NetworkError(err_msg)
-            })?;
+        // Try fetching as a DataMap first with retries
+        let mut last_err = None;
+        let mut data_map = None;
+        for attempt in 1..=3 {
+            match self.client.data_map_fetch(address).await {
+                Ok(dm) => {
+                    data_map = Some(dm);
+                    break;
+                }
+                Err(e) => {
+                    let err_msg = e.to_string();
+                    println!("⚠️ Attempt {} to fetch DataMap failed: {}", attempt, err_msg);
+                    last_err = Some(err_msg);
+                    tokio::time::sleep(std::time::Duration::from_millis(500 * attempt)).await;
+                }
+            }
+        }
 
-        println!("Found DataMap, downloading chunks...");
-        let data = self.client.data_download(&data_map).await
-            .map_err(|e| {
-                let err_msg = e.to_string();
-                println!("❌ Failed to download chunks: {}", err_msg);
-                tracker.error(&err_msg);
-                ResolveError::NetworkError(err_msg)
-            })?;
+        if let Some(dm) = data_map {
+            println!("Found DataMap, downloading chunks...");
+            let mut data = None;
+            for attempt in 1..=3 {
+                match self.client.data_download(&dm).await {
+                    Ok(d) => {
+                        data = Some(d);
+                        break;
+                    }
+                    Err(e) => {
+                        let err_msg = e.to_string();
+                        println!("⚠️ Attempt {} to download chunks failed: {}", attempt, err_msg);
+                        last_err = Some(err_msg);
+                        tokio::time::sleep(std::time::Duration::from_millis(1000 * attempt)).await;
+                    }
+                }
+            }
 
-        println!("✅ Download complete ({} bytes). Sniffing MIME type...", data.len());
+            if let Some(data) = data {
+                println!("✅ Download complete ({} bytes).", data.len());
+                tracker.finish(data.len());
+                let mime = self.sniff_mime(&data, sub_path);
+                let resolved = ResolvedContent::SingleFile { data, mime };
+                self.cache.insert(*address, Arc::new(resolved.clone()));
+                return Ok(resolved);
+            }
+        } else {
+            // Fallback to raw chunk if it's not a DataMap
+            println!("Address not a DataMap, trying raw chunk fetch...");
+            match self.client.chunk_get(address).await {
+                Ok(Some(chunk)) => {
+                    println!("✅ Raw chunk retrieved ({} bytes).", chunk.content.len());
+                    tracker.finish(chunk.content.len());
+                    let mime = self.sniff_mime(&chunk.content, sub_path);
+                    let resolved = ResolvedContent::RawChunk { data: chunk.content, mime };
+                    self.cache.insert(*address, Arc::new(resolved.clone()));
+                    return Ok(resolved);
+                }
+                Ok(None) => {
+                    last_err = Some("Chunk not found on network".to_string());
+                }
+                Err(e) => {
+                    last_err = Some(e.to_string());
+                }
+            }
+        }
 
-        tracker.finish(data.len());
+        let final_err = last_err.unwrap_or_else(|| "Unknown resolution error".to_string());
+        tracker.error(&final_err);
+        Err(ResolveError::NetworkError(final_err))
+    }
 
-        let mime = if data.len() >= 4 && &data[0..4] == b"\x89PNG" {
-            "image/png".to_string()
-        } else if data.len() >= 4 && &data[0..4] == b"%PDF" {
-            "application/pdf".to_string()
-        } else if data.len() >= 2 && &data[0..2] == b"\xff\xd8" {
-            "image/jpeg".to_string()
-        } else if data.iter().take(512).any(|&b| b == 0) {
+    fn sniff_mime(&self, data: &[u8], sub_path: Option<&str>) -> String {
+        if let Some(path) = sub_path {
+            if let Some(mime) = mime_guess::from_path(path).first_raw() {
+                return mime.to_string();
+            }
+        }
+
+        // Standard signatures
+        if data.len() >= 4 && &data[0..4] == b"\x89PNG" {
+            return "image/png".to_string();
+        }
+        if data.len() >= 4 && &data[0..4] == b"%PDF" {
+            return "application/pdf".to_string();
+        }
+        if data.len() >= 2 && &data[0..2] == b"\xff\xd8" {
+            return "image/jpeg".to_string();
+        }
+        if data.len() >= 3 && &data[0..3] == b"ID3" {
+            return "audio/mpeg".to_string();
+        }
+        if data.len() >= 3 && &data[0..2] == b"\xff\xfb" {
+            return "audio/mpeg".to_string();
+        }
+
+        // Generic text/binary fallback
+        if data.iter().take(512).any(|&b| b == 0) {
             "application/octet-stream".to_string()
         } else {
             let sample_vec: Vec<u8> = data.iter().take(512).cloned().collect();
@@ -96,11 +167,6 @@ impl ContentResolver {
             } else {
                 "text/plain".to_string()
             }
-        };
-
-        let resolved = ResolvedContent::SingleFile { data, mime };
-        self.cache.insert(*address, Arc::new(resolved.clone()));
-
-        Ok(resolved)
+        }
     }
 }

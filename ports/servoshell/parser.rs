@@ -70,9 +70,19 @@ pub(crate) fn location_bar_input_to_url(request: &str, searchpage: &str) -> Opti
     let request = request.trim();
     ServoUrl::parse(request)
         .ok()
+        .or_else(|| try_as_ant_address(request))
         .or_else(|| try_as_file(request))
         .or_else(|| try_as_domain(request))
         .or_else(|| try_as_search_page(request, searchpage))
+}
+
+fn try_as_ant_address(request: &str) -> Option<ServoUrl> {
+    let parts: Vec<&str> = request.splitn(2, '/').collect();
+    let addr = parts[0];
+    if addr.len() == 64 && addr.chars().all(|c| c.is_ascii_hexdigit()) {
+        return ServoUrl::parse(&format!("ant://{}", request)).ok();
+    }
+    None
 }
 
 fn try_as_file(request: &str) -> Option<ServoUrl> {

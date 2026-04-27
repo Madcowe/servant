@@ -16,6 +16,9 @@ struct Args {
     /// Path to a devnet manifest JSON file
     #[arg(long)]
     devnet_manifest: Option<String>,
+
+    /// URL or address to load
+    url: Option<String>,
 }
 
 fn main() {

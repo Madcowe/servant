@@ -60,4 +60,10 @@ impl ContentCache {
         state.map.insert(address, content);
         state.order.push_back(address);
     }
+
+    pub fn clear(&self) {
+        let mut state = self.cache.lock().unwrap();
+        state.map.clear();
+        state.order.clear();
+    }
 }

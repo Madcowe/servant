@@ -42,6 +42,9 @@ impl ProtocolHandler for AntProtocolHandler {
         let timing_type = request.timing_type();
 
         if url.host_str() == Some("settings") {
+            if url.path() == "/clear-cache" {
+                self.resolver.clear_cache();
+            }
             let response = self.settings_ui.handle_request(request);
             return Box::pin(std::future::ready(response));
         }
@@ -58,7 +61,8 @@ impl ProtocolHandler for AntProtocolHandler {
 
             let sub_path = ant_url.sub_path.as_deref();
             match self.resolver.resolve(&ant_url.address, sub_path).await {
-                Ok(ResolvedContent::SingleFile { data, mime }) => {
+                Ok(ResolvedContent::SingleFile { data, mime }) | 
+                Ok(ResolvedContent::RawChunk { data, mime }) => {
                     let mut response = Response::new(url, ResourceFetchTiming::new(timing_type));
                     *response.body.lock() = ResponseBody::Done(data.to_vec());
                     if let Ok(hv) = HeaderValue::from_str(&mime) {

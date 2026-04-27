@@ -42,7 +42,7 @@ impl SettingsUi {
             <div class="card">
                 <h2>Cache</h2>
                 <p>Content caching is enabled to improve performance on the Autonomi network.</p>
-                <button onclick="alert('Cache cleared!')">Clear Cache</button>
+                <button onclick="window.location.href='ant://settings/clear-cache'">Clear Cache</button>
             </div>
         </body>
         </html>
