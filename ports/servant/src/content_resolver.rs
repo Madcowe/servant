@@ -48,19 +48,20 @@ impl ContentResolver {
         self.cache.clear();
     }
 
+    pub fn is_cached(&self, address: &[u8; 32]) -> bool {
+        self.cache.get(address).is_some()
+    }
+
     pub async fn resolve(&self, address: &[u8; 32], sub_path: Option<&str>) -> Result<ResolvedContent, ResolveError> {
-        if let Some(path) = sub_path {
-            if !path.is_empty() {
-                return Err(ResolveError::NotFound("Directory support coming soon".to_string()));
-            }
-        }
+        // sub_path is now used for MIME sniffing and will be used for directories later.
 
         if let Some(cached) = self.cache.get(address) {
             return Ok((*cached).clone());
         }
 
-        println!("Resolving ant://{} ...", hex::encode(address));
-        let tracker = LoadingTracker::start();
+        let addr_hex = hex::encode(address);
+        println!("Resolving ant://{} ...", addr_hex);
+        let tracker = LoadingTracker::start(&addr_hex);
 
         // Try fetching as a DataMap first with retries
         let mut last_err = None;
@@ -81,10 +82,13 @@ impl ContentResolver {
         }
 
         if let Some(dm) = data_map {
+            tracker.update_status("Downloading file chunks...");
             println!("Found DataMap, downloading chunks...");
+            
+            // We use a manual download loop to track progress
             let mut data = None;
             for attempt in 1..=3 {
-                match self.client.data_download(&dm).await {
+                match self.download_with_progress(&dm, &tracker).await {
                     Ok(d) => {
                         data = Some(d);
                         break;
@@ -92,6 +96,7 @@ impl ContentResolver {
                     Err(e) => {
                         let err_msg = e.to_string();
                         println!("⚠️ Attempt {} to download chunks failed: {}", attempt, err_msg);
+                        tracker.update_status(&format!("Download attempt {} failed, retrying...", attempt));
                         last_err = Some(err_msg);
                         tokio::time::sleep(std::time::Duration::from_millis(1000 * attempt)).await;
                     }
@@ -107,6 +112,7 @@ impl ContentResolver {
                 return Ok(resolved);
             }
         } else {
+            tracker.update_status("Address not a DataMap, trying raw chunk fetch...");
             // Fallback to raw chunk if it's not a DataMap
             println!("Address not a DataMap, trying raw chunk fetch...");
             match self.client.chunk_get(address).await {
@@ -130,6 +136,43 @@ impl ContentResolver {
         let final_err = last_err.unwrap_or_else(|| "Unknown resolution error".to_string());
         tracker.error(&final_err);
         Err(ResolveError::NetworkError(final_err))
+    }
+
+    async fn download_with_progress(&self, data_map: &ant_core::data::DataMap, tracker: &LoadingTracker) -> Result<Bytes, ant_core::data::error::Error> {
+        use futures::stream::{self, StreamExt};
+        use self_encryption::EncryptedChunk;
+        
+        let addresses = data_map.infos().iter().map(|i| i.dst_hash.0).collect::<Vec<_>>();
+        let total_chunks = addresses.len();
+        tracker.update_progress(0, Some(total_chunks));
+
+        let mut chunks = Vec::with_capacity(total_chunks);
+        let mut fetched = 0;
+
+        let mut stream = stream::iter(addresses)
+            .map(|addr| {
+                let client = self.client.clone();
+                async move { client.chunk_get(&addr).await }
+            })
+            .buffered(4); // Use small concurrency
+
+        while let Some(chunk_res) = stream.next().await {
+            match chunk_res? {
+                Some(chunk) => {
+                    chunks.push(EncryptedChunk {
+                        content: chunk.content,
+                    });
+                    fetched += 1;
+                    tracker.update_progress(fetched, Some(total_chunks));
+                }
+                None => return Err(ant_core::data::error::Error::InvalidData("Missing chunk in DataMap".to_string())),
+            }
+        }
+
+        let data = self_encryption::decrypt(data_map, &chunks)
+            .map_err(|e| ant_core::data::error::Error::Encryption(e.to_string()))?;
+        
+        Ok(data)
     }
 
     fn sniff_mime(&self, data: &[u8], sub_path: Option<&str>) -> String {
@@ -159,6 +202,8 @@ impl ContentResolver {
         // Generic text/binary fallback
         if data.iter().take(512).any(|&b| b == 0) {
             "application/octet-stream".to_string()
+        } else if data.is_empty() {
+            "text/plain".to_string()
         } else {
             let sample_vec: Vec<u8> = data.iter().take(512).cloned().collect();
             let s = String::from_utf8_lossy(&sample_vec);

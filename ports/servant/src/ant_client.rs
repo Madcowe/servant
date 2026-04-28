@@ -72,6 +72,8 @@ impl AntClientManager {
         config.ipv6 = false; // Match ant_get_file explicitly disabling ipv6
         config.quote_timeout_secs = 60; // Increase timeouts for reliability
         config.store_timeout_secs = 60;
+        config.quote_concurrency = 4; // Lower concurrency to fix "missing chunk" errors
+        config.store_concurrency = 4;
 
         println!("Starting Autonomi client with {} bootstrap peers...", peers.len());
         for (i, peer) in peers.iter().enumerate().take(5) {

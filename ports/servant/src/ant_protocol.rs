@@ -13,6 +13,8 @@ use crate::ant_url::AntUrl;
 use crate::content_resolver::{ContentResolver, ResolvedContent};
 use crate::settings::SettingsUi;
 use crate::ant_client::AntClientManager;
+use crate::loading_html::LOADING_HTML;
+use crate::loading::LoadingTracker;
 use std::sync::Arc;
 
 pub struct AntProtocolHandler {
@@ -41,12 +43,36 @@ impl ProtocolHandler for AntProtocolHandler {
         let url = request.current_url();
         let timing_type = request.timing_type();
 
-        if url.host_str() == Some("settings") {
-            if url.path() == "/clear-cache" {
+        if url.as_url().host_str() == Some("settings") {
+            if url.as_url().path() == "/clear-cache" {
                 self.resolver.clear_cache();
             }
             let response = self.settings_ui.handle_request(request);
             return Box::pin(std::future::ready(response));
+        }
+
+        if url.as_url().host_str() == Some("loading-status") {
+            let address = url.as_url().path().trim_start_matches('/');
+            if let Some(progress) = LoadingTracker::get_progress(address) {
+                let json = format!(
+                    r#"{{"status": "{}", "bytes_loaded": {}, "total_bytes": {}, "error": {}, "finished": {}}}"#,
+                    progress.status,
+                    progress.bytes_loaded,
+                    progress.total_bytes.map(|b| b.to_string()).unwrap_or_else(|| "null".to_string()),
+                    progress.error.as_ref().map(|e| format!("\"{}\"", e)).unwrap_or_else(|| "null".to_string()),
+                    progress.finished
+                );
+                let mut response = Response::new(url, ResourceFetchTiming::new(timing_type));
+                *response.body.lock() = ResponseBody::Done(json.into_bytes());
+                if let Ok(hv) = HeaderValue::from_str("application/json") {
+                    response.headers.insert(http::header::CONTENT_TYPE, hv);
+                }
+                return Box::pin(std::future::ready(response));
+            } else {
+                return Box::pin(std::future::ready(Response::network_error(
+                    NetworkError::ResourceLoadError("No progress found for this address".to_string())
+                )));
+            }
         }
 
         Box::pin(async move {
@@ -58,6 +84,19 @@ impl ProtocolHandler for AntProtocolHandler {
                     ));
                 }
             };
+
+            let query: std::collections::HashMap<_, _> = url.as_url().query_pairs().collect();
+            let is_raw = query.contains_key("servant_raw");
+
+            // If it's a new address and not raw, show the loading page
+            if !is_raw && !self.resolver.is_cached(&ant_url.address) {
+                let mut response = Response::new(url, ResourceFetchTiming::new(timing_type));
+                *response.body.lock() = ResponseBody::Done(LOADING_HTML.as_bytes().to_vec());
+                if let Ok(hv) = HeaderValue::from_str("text/html") {
+                    response.headers.insert(http::header::CONTENT_TYPE, hv);
+                }
+                return response;
+            }
 
             let sub_path = ant_url.sub_path.as_deref();
             match self.resolver.resolve(&ant_url.address, sub_path).await {
