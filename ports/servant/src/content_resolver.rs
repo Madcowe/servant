@@ -149,8 +149,8 @@ impl ContentResolver {
         use ant_core::data::DownloadEvent;
         
         let (tx, mut rx) = mpsc::channel(64);
-        let temp_path = format!("ports/servant/download_{}.tmp", hex::encode(address));
-        let path = std::path::PathBuf::from(temp_path);
+        let mut path = std::env::temp_dir();
+        path.push(format!("download_{}.tmp", hex::encode(address)));
         
         let client_clone = self.client.clone();
         let dm_clone = data_map.clone();
