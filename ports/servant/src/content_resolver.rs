@@ -89,7 +89,7 @@ impl ContentResolver {
             // We use a manual download loop to track progress
             let mut data = None;
             for attempt in 1..=3 {
-                match self.download_with_progress(&dm, &tracker).await {
+                match self.download_with_progress(address, &dm, &tracker).await {
                     Ok(d) => {
                         data = Some(d);
                         break;
@@ -139,41 +139,46 @@ impl ContentResolver {
         Err(ResolveError::NetworkError(final_err))
     }
 
-    async fn download_with_progress(&self, data_map: &ant_core::data::DataMap, tracker: &LoadingTracker) -> Result<Bytes, ant_core::data::error::Error> {
-        use futures::stream::{self, StreamExt};
-        use self_encryption::EncryptedChunk;
+    async fn download_with_progress(&self, address: &[u8; 32], data_map: &ant_core::data::DataMap, tracker: &LoadingTracker) -> Result<Bytes, ant_core::data::error::Error> {
+        use tokio::sync::mpsc;
+        use ant_core::data::DownloadEvent;
         
-        let addresses = data_map.infos().iter().map(|i| i.dst_hash.0).collect::<Vec<_>>();
-        let total_chunks = addresses.len();
-        tracker.update_progress(0, Some(total_chunks));
-
-        let mut chunks = Vec::with_capacity(total_chunks);
-        let mut fetched = 0;
-
-        let mut stream = stream::iter(addresses)
-            .map(|addr| {
-                let client = self.client.clone();
-                async move { client.chunk_get(&addr).await }
-            })
-            .buffered(4); // Use small concurrency
-
-        while let Some(chunk_res) = stream.next().await {
-            match chunk_res? {
-                Some(chunk) => {
-                    chunks.push(EncryptedChunk {
-                        content: chunk.content,
-                    });
-                    fetched += 1;
-                    tracker.update_progress(fetched, Some(total_chunks));
+        let (tx, mut rx) = mpsc::channel(64);
+        let temp_path = format!("ports/servant/download_{}.tmp", hex::encode(address));
+        let path = std::path::PathBuf::from(temp_path);
+        
+        let client_clone = self.client.clone();
+        let dm_clone = data_map.clone();
+        let path_clone = path.clone();
+        
+        let download_handle = tokio::spawn(async move {
+            client_clone.file_download_with_progress(&dm_clone, &path_clone, Some(tx)).await
+        });
+        
+        while let Some(event) = rx.recv().await {
+            match event {
+                DownloadEvent::ResolvingDataMap { total_map_chunks } => {
+                    tracker.update_status(&format!("Resolving DataMap ({} chunks)...", total_map_chunks));
                 }
-                None => return Err(ant_core::data::error::Error::InvalidData("Missing chunk in DataMap".to_string())),
+                DownloadEvent::MapChunkFetched { fetched } => {
+                    tracker.update_status(&format!("Fetched DataMap chunk {}...", fetched));
+                }
+                DownloadEvent::DataMapResolved { total_chunks } => {
+                    tracker.update_status("DataMap resolved.");
+                    tracker.update_progress(0, Some(total_chunks));
+                }
+                DownloadEvent::ChunksFetched { fetched, total } => {
+                    tracker.update_progress(fetched, Some(total));
+                }
             }
         }
-
-        let data = self_encryption::decrypt(data_map, &chunks)
-            .map_err(|e| ant_core::data::error::Error::Encryption(e.to_string()))?;
         
-        Ok(data)
+        let _ = download_handle.await.map_err(|e| ant_core::data::error::Error::Encryption(e.to_string()))??;
+        
+        let data = tokio::fs::read(&path).await.map_err(|e| ant_core::data::error::Error::InvalidData(e.to_string()))?;
+        let _ = tokio::fs::remove_file(&path).await;
+        
+        Ok(Bytes::from(data))
     }
 
     fn sniff_mime(&self, data: &[u8], sub_path: Option<&str>) -> String {
