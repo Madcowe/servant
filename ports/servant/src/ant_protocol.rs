@@ -69,9 +69,13 @@ impl ProtocolHandler for AntProtocolHandler {
                 }
                 return Box::pin(std::future::ready(response));
             } else {
-                return Box::pin(std::future::ready(Response::network_error(
-                    NetworkError::ResourceLoadError("No progress found for this address".to_string())
-                )));
+                let json = r#"{"status": "Error", "bytes_loaded": 0, "total_bytes": null, "error": "No progress found for this address", "finished": true}"#;
+                let mut response = Response::new(url, ResourceFetchTiming::new(timing_type));
+                *response.body.lock() = ResponseBody::Done(json.as_bytes().to_vec());
+                if let Ok(hv) = HeaderValue::from_str("application/json") {
+                    response.headers.insert(http::header::CONTENT_TYPE, hv);
+                }
+                return Box::pin(std::future::ready(response));
             }
         }
 

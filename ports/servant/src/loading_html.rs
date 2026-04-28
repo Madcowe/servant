@@ -18,8 +18,8 @@ pub const LOADING_HTML: &str = r#"
 </head>
 <body>
     <div class="container">
-        <div class="spinner"></div>
-        <h1>Retrieving Content</h1>
+        <div class="spinner" id="spinner"></div>
+        <h1 id="title">Retrieving Content</h1>
         <div class="address" id="address"></div>
         <div class="status" id="status">Connecting to Autonomi network...</div>
         <div class="progress-container">
@@ -49,8 +49,10 @@ pub const LOADING_HTML: &str = r#"
                 
                 if (data.finished) {
                     if (data.error) {
-                        document.getElementById('status').innerText = 'Error: ' + data.error;
+                        document.getElementById('title').innerText = 'Error';
+                        document.getElementById('status').innerText = data.error;
                         document.getElementById('status').style.color = '#ff3b30';
+                        document.getElementById('spinner').style.display = 'none';
                     } else {
                         // Success! Refresh to get the actual content
                         const url = new URL(window.location.href);
@@ -63,7 +65,10 @@ pub const LOADING_HTML: &str = r#"
                 setTimeout(checkStatus, 500);
             } catch (e) {
                 console.error('Failed to check status:', e);
-                setTimeout(checkStatus, 1000);
+                document.getElementById('title').innerText = 'Error';
+                document.getElementById('status').innerText = 'Error fetching status';
+                document.getElementById('status').style.color = '#ff3b30';
+                document.getElementById('spinner').style.display = 'none';
             }
         }
         

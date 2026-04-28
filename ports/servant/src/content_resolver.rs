@@ -47,6 +47,7 @@ impl ContentResolver {
     pub fn clear_cache(&self) {
         println!("Clearing content cache...");
         self.cache.clear();
+        self.client.chunk_cache().clear();
     }
 
     pub fn is_cached(&self, address: &[u8; 32]) -> bool {
