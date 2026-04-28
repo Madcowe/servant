@@ -90,6 +90,15 @@ impl ProtocolHandler for AntProtocolHandler {
 
             // If it's a new address and not raw, show the loading page
             if !is_raw && !self.resolver.is_cached(&ant_url.address) {
+                let resolver = self.resolver.clone();
+                let addr = ant_url.address;
+                let sub_path_opt = ant_url.sub_path.clone();
+                
+                tokio::spawn(async move {
+                    let sub_path = sub_path_opt.as_deref();
+                    let _ = resolver.resolve(&addr, sub_path).await;
+                });
+
                 let mut response = Response::new(url, ResourceFetchTiming::new(timing_type));
                 *response.body.lock() = ResponseBody::Done(LOADING_HTML.as_bytes().to_vec());
                 if let Ok(hv) = HeaderValue::from_str("text/html") {

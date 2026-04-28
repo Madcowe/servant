@@ -33,6 +33,7 @@ impl std::fmt::Display for ResolveError {
 
 impl std::error::Error for ResolveError {}
 
+#[derive(Clone)]
 pub struct ContentResolver {
     client: Arc<Client>,
     cache: Arc<ContentCache>,

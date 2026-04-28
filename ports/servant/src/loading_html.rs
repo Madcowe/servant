@@ -29,7 +29,7 @@ pub const LOADING_HTML: &str = r#"
     </div>
 
     <script>
-        const address = window.location.pathname.substring(1).split('?')[0];
+        const address = window.location.hostname;
         document.getElementById('address').innerText = 'ant://' + address;
         
         async function checkStatus() {
