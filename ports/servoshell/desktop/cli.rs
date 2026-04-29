@@ -23,6 +23,8 @@ where
     // TODO: once log-panics is released, can this be replaced by
     // log_panics::init()?
     panic::set_hook(Box::new(panic_hook::panic_hook));
+    
+    let _ = crate::resources::resource_protocol_dir_path();
 
     // Skip the first argument, which is the binary name.
     let args: Vec<String> = env::args().skip(1).collect();
