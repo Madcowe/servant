@@ -44,6 +44,13 @@ impl ContentCache {
         }
     }
 
+    pub fn get_bytes(&self, address: &[u8; 32]) -> Option<bytes::Bytes> {
+        self.get(address).map(|content| match &*content {
+            ResolvedContent::SingleFile { data, .. } => data.clone(),
+            ResolvedContent::RawChunk { data, .. } => data.clone(),
+        })
+    }
+
     pub fn insert(&self, address: [u8; 32], content: Arc<ResolvedContent>) {
         let mut state = self.cache.lock().unwrap();
         if state.map.contains_key(&address) {

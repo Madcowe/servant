@@ -43,8 +43,14 @@ fn main() {
         let resolver = ContentResolver::new(ant_manager.client(), cache);
 
         // Register ant:// protocol
-        protocols.register("ant", AntProtocolHandler::new(resolver, ant_manager))
+        protocols.register("ant", AntProtocolHandler::new(resolver.clone(), ant_manager))
             .expect("Failed to register ant:// protocol handler");
+
+        // Provide a way for the UI to save files from the cache
+        let resolver_clone = resolver.clone();
+        servoshell::set_resource_data_provider(Box::new(move |url| {
+            resolver_clone.get_cached_bytes_for_url(url).map(|b| b.to_vec())
+        }));
             
         println!("ant:// protocol successfully registered.");
     });

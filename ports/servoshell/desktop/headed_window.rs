@@ -1114,6 +1114,10 @@ impl PlatformWindow for HeadedWindow {
         }
     }
 
+    fn show_save_dialog(&self, webview_id: WebViewId, url: Url, data: Vec<u8>) {
+        self.add_dialog(webview_id, Dialog::new_save_dialog(url, data));
+    }
+
     fn hide_embedder_control(&self, webview_id: WebViewId, embedder_control_id: EmbedderControlId) {
         if self.visible_input_method.get() == Some(embedder_control_id) {
             self.visible_input_method.set(None);

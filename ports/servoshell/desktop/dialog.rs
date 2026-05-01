@@ -56,6 +56,11 @@ pub enum Dialog {
         menu: Option<ContextMenu>,
         toolbar_offset: Length<f32, DeviceIndependentPixel>,
     },
+    SaveFile {
+        dialog: EguiFileDialog,
+        url: url::Url,
+        data: Vec<u8>,
+    },
 }
 
 impl Dialog {
@@ -96,6 +101,21 @@ impl Dialog {
             password: String::new(),
             request: Some(authentication_request),
         }
+    }
+
+    pub fn new_save_dialog(url: url::Url, data: Vec<u8>) -> Self {
+        let mut dialog = EguiFileDialog::new();
+        // Try to guess filename from URL
+        let filename = url
+            .path_segments()
+            .and_then(|s| s.last())
+            .filter(|s| !s.is_empty())
+            .unwrap_or("index.html");
+
+        dialog.save_file();
+        let dialog = dialog.default_file_name(filename);
+
+        Dialog::SaveFile { dialog, url, data }
     }
 
     pub fn new_permission_request_dialog(permission_request: PermissionRequest) -> Self {
@@ -644,6 +664,7 @@ impl Dialog {
                 toolbar_offset,
             } => {
                 let mut is_open = true;
+                let mut next_dialog = None;
                 if let Some(context_menu) = menu {
                     let mut selected_action = None;
                     let mut position = context_menu.position();
@@ -698,6 +719,22 @@ impl Dialog {
                                         },
                                     }
                                 }
+
+                                // Add custom "Save As..." option for images or links
+                                let info = context_menu.element_info();
+                                if let Some(url) = info.image_url.clone().or_else(|| info.link_url.clone()) {
+                                    ui.separator();
+                                    if ui.button("Save As...").clicked() {
+                                        if let Some(provider) =
+                                            crate::RESOURCE_DATA_PROVIDER.lock().unwrap().as_ref()
+                                        {
+                                            if let Some(data) = provider(&url) {
+                                                next_dialog = Some(Dialog::new_save_dialog(url, data));
+                                                return;
+                                            }
+                                        }
+                                    }
+                                }
                             })
                         });
 
@@ -712,7 +749,33 @@ impl Dialog {
                         }
                     }
                 }
+
+                if let Some(d) = next_dialog {
+                    *self = d;
+                    return true;
+                }
+
                 is_open
+            },
+            Dialog::SaveFile { dialog, data, .. } => {
+                if *dialog.state() == DialogState::Closed {
+                    dialog.save_file();
+                }
+
+                let mut action = DialogAction::Continue;
+                let state = dialog.update(ctx).state();
+                match state {
+                    DialogState::Open => action = DialogAction::Continue,
+                    DialogState::Picked(path) => {
+                        if let Err(e) = std::fs::write(path, data) {
+                            error!("Failed to save file to {:?}: {}", path, e);
+                        }
+                        action = DialogAction::Submit;
+                    },
+                    DialogState::Cancelled | DialogState::Closed => action = DialogAction::Dismiss,
+                    _ => {},
+                }
+                matches!(action, DialogAction::Continue)
             },
         }
     }

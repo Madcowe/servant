@@ -58,6 +58,11 @@ impl ContentResolver {
         self.cache.get(address).is_some()
     }
 
+    pub fn get_cached_bytes_for_url(&self, url: &url::Url) -> Option<bytes::Bytes> {
+        let ant_url = crate::ant_url::AntUrl::parse(url).ok()?;
+        self.cache.get_bytes(&ant_url.address)
+    }
+
     pub async fn resolve(&self, address: &[u8; 32], sub_path: Option<&str>) -> Result<ResolvedContent, ResolveError> {
         // sub_path is now used for MIME sniffing and will be used for directories later.
 

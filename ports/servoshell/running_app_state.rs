@@ -160,6 +160,7 @@ pub(crate) enum UserInterfaceCommand {
     NewWebView,
     CloseWebView(WebViewId),
     NewWindow,
+    Save(Url),
 }
 
 pub(crate) struct RunningAppState {

@@ -24,6 +24,14 @@ mod resources;
 mod running_app_state;
 mod webdriver;
 mod window;
+ 
+pub type ResourceDataProvider = Box<dyn Fn(&url::Url) -> Option<Vec<u8>> + Send + Sync>;
+pub static RESOURCE_DATA_PROVIDER: std::sync::Mutex<Option<ResourceDataProvider>> =
+    std::sync::Mutex::new(None);
+ 
+pub fn set_resource_data_provider(provider: ResourceDataProvider) {
+    *RESOURCE_DATA_PROVIDER.lock().unwrap() = Some(provider);
+}
 
 pub mod platform {
     #[cfg(target_os = "macos")]
