@@ -7,7 +7,7 @@ use std::pin::Pin;
 
 use http::header::HeaderValue;
 use net_traits::http_status::HttpStatus;
-use net_traits::request::Request;
+use net_traits::request::{Request, Destination};
 use net_traits::response::{Response, ResponseBody};
 use net_traits::{NetworkError, ResourceFetchTiming};
 use net::protocols::ProtocolHandler;
@@ -95,9 +95,11 @@ impl ProtocolHandler for AntProtocolHandler {
 
             let query: std::collections::HashMap<_, _> = url.as_url().query_pairs().collect();
             let is_raw = query.contains_key("servant_raw");
+            let is_navigation = request.destination == Destination::Document;
 
-            // If it's a new address and not raw, show the loading page
-            if !is_raw && !self.resolver.is_cached(&ant_url.address) {
+            // If it's a new document navigation and not cached, show the loading page.
+            // We ignore `is_raw` here to ensure shared URLs still show the loading progress.
+            if is_navigation && !self.resolver.is_cached(&ant_url.address) {
                 let resolver = self.resolver.clone();
                 let addr = ant_url.address;
                 let sub_path_opt = ant_url.sub_path.clone();

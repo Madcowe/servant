@@ -59,6 +59,18 @@ The Autonomi client runs on its own background `tokio::runtime::Runtime`. In the
 **The Fix:**
 Modified `AntProtocolHandler` to hold an `Arc<AntClientManager>`. This ensures the background runtime stays alive for the entire duration of the browser session.
 
+### 4. Self-Encryption Tree Traversal (Large/MP3 Data Maps)
+Large payloads (e.g., streaming formats over 3072KB) build hierarchical chunk structures. Manual loop builders fail to scrape the lower branches without dropping payloads. 
+
+**The Fix:**
+Substituted local builders with asynchronous SDK functions (`client.file_download_with_progress`) directly in `content_resolver.rs` to extract tiered leaves reliably.
+
+### 5. Multi-Process Resource Traversal Faults
+Content process workers split lazily on new tabs, missing environment context paths. Because they lack higher-order traversal authorization, absolute hardcoding is required to bridge the security gap.
+
+**The Fix:**
+Bound global overrides into `cli.rs` and added secondary local paths inside `ports/servoshell/resources/mod.rs`.
+
 ## Running the Project
 The Servant binary now supports standard Autonomi CLI arguments:
 
