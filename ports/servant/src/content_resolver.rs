@@ -116,8 +116,8 @@ impl ContentResolver {
 
             if let Some(data) = data {
                 println!("✅ Download complete ({} bytes).", data.len());
-                tracker.finish(data.len());
                 let mime = self.sniff_mime(&data, sub_path);
+                tracker.finish_with_mime(data.len(), Some(mime.clone()));
                 let resolved = ResolvedContent::SingleFile { data, mime };
                 self.cache.insert(*address, Arc::new(resolved.clone()));
                 return Ok(resolved);
@@ -129,8 +129,8 @@ impl ContentResolver {
             match self.client.chunk_get(address).await {
                 Ok(Some(chunk)) => {
                     println!("✅ Raw chunk retrieved ({} bytes).", chunk.content.len());
-                    tracker.finish(chunk.content.len());
                     let mime = self.sniff_mime(&chunk.content, sub_path);
+                    tracker.finish_with_mime(chunk.content.len(), Some(mime.clone()));
                     let resolved = ResolvedContent::RawChunk { data: chunk.content, mime };
                     self.cache.insert(*address, Arc::new(resolved.clone()));
                     return Ok(resolved);

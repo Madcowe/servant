@@ -16,6 +16,7 @@ pub struct LoadingProgress {
     pub status: String,
     pub bytes_loaded: usize,
     pub total_bytes: Option<usize>,
+    pub mime: Option<String>,
     pub error: Option<String>,
     pub finished: bool,
 }
@@ -33,6 +34,7 @@ impl LoadingTracker {
             status: "Initializing...".to_string(),
             bytes_loaded: 0,
             total_bytes: None,
+            mime: None,
             error: None,
             finished: false,
         });
@@ -57,12 +59,17 @@ impl LoadingTracker {
     }
 
     pub fn finish(&self, bytes: usize) {
+        self.finish_with_mime(bytes, None);
+    }
+
+    pub fn finish_with_mime(&self, bytes: usize, mime: Option<String>) {
         println!("✅ Fetch complete! {} bytes loaded in {:?}", bytes, self.start.elapsed());
         let mut progress = PROGRESS.lock().unwrap();
         if let Some(p) = progress.get_mut(&self.address) {
             p.status = "Complete".to_string();
             p.bytes_loaded = bytes;
             p.total_bytes = Some(bytes);
+            p.mime = mime;
             p.finished = true;
         }
     }

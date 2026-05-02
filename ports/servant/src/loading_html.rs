@@ -18,6 +18,14 @@ pub const LOADING_HTML: &str = r#"
         .stats { font-size: 12px; color: #86868b; }
         .spinner { border: 3px solid #f3f3f3; border-top: 3px solid #0071e3; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .actions { display: none; flex-direction: column; gap: 12px; margin-top: 30px; }
+        .btn { padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; border: none; font-size: 14px; transition: all 0.2s ease; }
+        .btn-primary { background-color: #0071e3; color: white; }
+        .btn-primary:hover { background-color: #0077ed; }
+        .btn-secondary { background-color: #e8e8ed; color: #0071e3; }
+        .btn-secondary:hover { background-color: #d2d2d7; }
+        .mime-badge { display: inline-block; padding: 4px 8px; background: #f5f5f7; border-radius: 6px; font-family: monospace; font-size: 11px; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -25,17 +33,44 @@ pub const LOADING_HTML: &str = r#"
         <div class="spinner" id="spinner"></div>
         <h1 id="title">Retrieving Content</h1>
         <div class="address" id="address"></div>
-        <div class="status" id="status">Connecting to Autonomi network...</div>
-        <div class="progress-container">
-            <div class="progress-bar" id="progress-bar"></div>
+        <div id="loading-ui">
+            <div class="status" id="status">Connecting to Autonomi network...</div>
+            <div class="progress-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+            <div class="stats" id="stats">0 bytes loaded</div>
         </div>
-        <div class="stats" id="stats">0 bytes loaded</div>
+        <div id="unsupported-ui" class="actions">
+            <div class="status">This file type cannot be rendered in-browser.</div>
+            <div class="mime-badge" id="mime-display"></div>
+            <button class="btn btn-primary" onclick="handleOpen()">Open with System Handler</button>
+            <button class="btn btn-secondary" onclick="handleSave()">Save to Disk</button>
+        </div>
     </div>
 
     <script>
         const address = window.location.hostname;
         document.getElementById('address').innerText = 'ant://' + address;
         
+        const RENDERABLE_MIMES = [
+            'text/html', 'text/css', 'text/javascript', 'application/javascript', 'application/x-javascript',
+            'text/plain', 'image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml',
+            'application/json', 'application/xml', 'text/xml'
+        ];
+
+        function isRenderable(mime) {
+            if (!mime) return false;
+            return RENDERABLE_MIMES.includes(mime.split(';')[0].toLowerCase());
+        }
+
+        function handleOpen() {
+            fetch('ant://system-open/' + address);
+        }
+
+        function handleSave() {
+            fetch('ant://save-as/' + address);
+        }
+
         async function checkStatus() {
             try {
                 const response = await fetch('ant://loading-status/' + address);
@@ -58,10 +93,19 @@ pub const LOADING_HTML: &str = r#"
                         document.getElementById('status').style.color = '#ff3b30';
                         document.getElementById('spinner').style.display = 'none';
                     } else {
-                        // Success! Refresh to get the actual content
-                        const url = new URL(window.location.href);
-                        url.searchParams.set('servant_raw', '1');
-                        window.location.href = url.toString();
+                        if (isRenderable(data.mime)) {
+                            // Success! Refresh to get the actual content
+                            const url = new URL(window.location.href);
+                            url.searchParams.set('servant_raw', '1');
+                            window.location.href = url.toString();
+                        } else {
+                            // Unsupported content
+                            document.getElementById('title').innerText = 'Unsupported Content';
+                            document.getElementById('loading-ui').style.display = 'none';
+                            document.getElementById('spinner').style.display = 'none';
+                            document.getElementById('unsupported-ui').style.display = 'flex';
+                            document.getElementById('mime-display').innerText = data.mime || 'application/octet-stream';
+                        }
                     }
                     return;
                 }

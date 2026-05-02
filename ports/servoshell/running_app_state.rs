@@ -150,8 +150,7 @@ impl WebViewCollection {
 }
 
 /// A command received via the user interacting with the user interface.
-#[cfg_attr(any(target_os = "android", target_env = "ohos"), expect(dead_code))]
-pub(crate) enum UserInterfaceCommand {
+pub enum UserInterfaceCommand {
     Go(String),
     Back,
     Forward,
@@ -414,6 +413,22 @@ impl RunningAppState {
     ) -> bool {
         // We clone here to avoid a double borrow. User interface commands can update the list of windows.
         let windows: Vec<_> = self.windows.borrow().values().cloned().collect();
+
+        // Process global commands from the queue
+        let global_commands = std::mem::take(&mut *crate::PENDING_UI_COMMANDS.lock().unwrap());
+        if !global_commands.is_empty() {
+            if let Some(window) = self.focused_window() {
+                for cmd in global_commands {
+                    window.queue_user_interface_command(cmd);
+                }
+            } else if let Some(window) = windows.first() {
+                // Fallback to the first window if none are focused
+                for cmd in global_commands {
+                    window.queue_user_interface_command(cmd);
+                }
+            }
+        }
+
         for window in windows {
             window.handle_interface_commands(self, create_platform_window);
         }

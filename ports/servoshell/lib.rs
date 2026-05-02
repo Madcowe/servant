@@ -25,12 +25,21 @@ mod running_app_state;
 mod webdriver;
 mod window;
  
+pub use crate::running_app_state::UserInterfaceCommand;
+ 
 pub type ResourceDataProvider = Box<dyn Fn(&url::Url) -> Option<Vec<u8>> + Send + Sync>;
 pub static RESOURCE_DATA_PROVIDER: std::sync::Mutex<Option<ResourceDataProvider>> =
     std::sync::Mutex::new(None);
  
 pub fn set_resource_data_provider(provider: ResourceDataProvider) {
     *RESOURCE_DATA_PROVIDER.lock().unwrap() = Some(provider);
+}
+ 
+ pub static PENDING_UI_COMMANDS: std::sync::Mutex<Vec<UserInterfaceCommand>> =
+    std::sync::Mutex::new(Vec::new());
+ 
+ pub fn queue_ui_command(command: UserInterfaceCommand) {
+    PENDING_UI_COMMANDS.lock().unwrap().push(command);
 }
 
 pub mod platform {

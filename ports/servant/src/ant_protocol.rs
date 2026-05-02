@@ -20,6 +20,8 @@ use crate::ant_client::AntClientManager;
 use crate::loading_html::LOADING_HTML;
 use crate::loading::LoadingTracker;
 use std::sync::Arc;
+use std::{fs, env};
+use std::process::Command;
 
 pub struct AntProtocolHandler {
     resolver: ContentResolver,
@@ -55,14 +57,41 @@ impl ProtocolHandler for AntProtocolHandler {
             return Box::pin(std::future::ready(response));
         }
 
+        if url.as_url().host_str() == Some("save-as") {
+            let address_hex = url.as_url().path().trim_start_matches('/');
+            if let Ok(u) = url::Url::parse(&format!("ant://{}", address_hex)) {
+                servoshell::queue_ui_command(servoshell::UserInterfaceCommand::Save(u));
+            }
+            let response = Response::new(url, ResourceFetchTiming::new(timing_type));
+            *response.body.lock() = ResponseBody::Done(vec![]);
+            return Box::pin(std::future::ready(response));
+        }
+
+        if url.as_url().host_str() == Some("system-open") {
+            let address_hex = url.as_url().path().trim_start_matches('/');
+            if let Ok(u) = url::Url::parse(&format!("ant://{}", address_hex)) {
+                if let Some(data) = self.resolver.get_cached_bytes_for_url(&u) {
+                    let mut temp_path = env::temp_dir();
+                    temp_path.push(format!("servant_{}", address_hex));
+                    if fs::write(&temp_path, data).is_ok() {
+                        let _ = Command::new("xdg-open").arg(&temp_path).spawn();
+                    }
+                }
+            }
+            let response = Response::new(url, ResourceFetchTiming::new(timing_type));
+            *response.body.lock() = ResponseBody::Done(vec![]);
+            return Box::pin(std::future::ready(response));
+        }
+
         if url.as_url().host_str() == Some("loading-status") {
             let address = url.as_url().path().trim_start_matches('/');
             if let Some(progress) = LoadingTracker::get_progress(address) {
                 let json = format!(
-                    r#"{{"status": "{}", "bytes_loaded": {}, "total_bytes": {}, "error": {}, "finished": {}}}"#,
+                    r#"{{"status": "{}", "bytes_loaded": {}, "total_bytes": {}, "mime": {}, "error": {}, "finished": {}}}"#,
                     progress.status,
                     progress.bytes_loaded,
                     progress.total_bytes.map(|b| b.to_string()).unwrap_or_else(|| "null".to_string()),
+                    progress.mime.as_ref().map(|m| format!("\"{}\"", m)).unwrap_or_else(|| "null".to_string()),
                     progress.error.as_ref().map(|e| format!("\"{}\"", e)).unwrap_or_else(|| "null".to_string()),
                     progress.finished
                 );
@@ -73,7 +102,7 @@ impl ProtocolHandler for AntProtocolHandler {
                 }
                 return Box::pin(std::future::ready(response));
             } else {
-                let json = r#"{"status": "Error", "bytes_loaded": 0, "total_bytes": null, "error": "No progress found for this address", "finished": true}"#;
+                let json = r#"{"status": "Error", "bytes_loaded": 0, "total_bytes": null, "mime": null, "error": "No progress found for this address", "finished": true}"#;
                 let mut response = Response::new(url, ResourceFetchTiming::new(timing_type));
                 *response.body.lock() = ResponseBody::Done(json.as_bytes().to_vec());
                 if let Ok(hv) = HeaderValue::from_str("application/json") {
@@ -94,7 +123,7 @@ impl ProtocolHandler for AntProtocolHandler {
             };
 
             let query: std::collections::HashMap<_, _> = url.as_url().query_pairs().collect();
-            let is_raw = query.contains_key("servant_raw");
+            let _is_raw = query.contains_key("servant_raw");
             let is_navigation = request.destination == Destination::Document;
 
             // If it's a new document navigation and not cached, show the loading page.
