@@ -273,8 +273,9 @@ impl ServoShellWindow {
         webview: WebView,
         embedder_control: EmbedderControl,
     ) {
+        let page_url = webview.url();
         self.platform_window
-            .show_embedder_control(webview.id(), embedder_control);
+            .show_embedder_control(webview.id(), embedder_control, page_url);
         self.set_needs_update();
         self.set_needs_repaint();
     }
@@ -423,7 +424,7 @@ pub(crate) trait PlatformWindow {
         true
     }
 
-    fn show_embedder_control(&self, _: WebViewId, _: EmbedderControl) {}
+    fn show_embedder_control(&self, _: WebViewId, _: EmbedderControl, _: Option<Url>) {}
     fn hide_embedder_control(&self, _: WebViewId, _: EmbedderControlId) {}
     fn dismiss_embedder_controls_for_webview(&self, _: WebViewId) {}
     fn show_bluetooth_device_dialog(

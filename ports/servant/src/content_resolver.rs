@@ -52,10 +52,18 @@ impl ContentResolver {
         println!("Clearing content cache...");
         self.cache.clear();
         self.client.chunk_cache().clear();
+        LoadingTracker::clear_all();
     }
 
     pub fn is_cached(&self, address: &[u8; 32]) -> bool {
         self.cache.get(address).is_some()
+    }
+
+    pub fn get_cached_mime(&self, address: &[u8; 32]) -> Option<String> {
+        self.cache.get(address).map(|c| match &*c {
+            ResolvedContent::SingleFile { mime, .. } => mime.clone(),
+            ResolvedContent::RawChunk { mime, .. } => mime.clone(),
+        })
     }
 
     pub fn get_cached_bytes_for_url(&self, url: &url::Url) -> Option<bytes::Bytes> {

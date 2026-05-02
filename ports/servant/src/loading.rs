@@ -88,4 +88,9 @@ impl LoadingTracker {
         let progress = PROGRESS.lock().unwrap();
         progress.get(address).cloned()
     }
+
+    pub fn clear_all() {
+        let mut progress = PROGRESS.lock().unwrap();
+        progress.clear();
+    }
 }

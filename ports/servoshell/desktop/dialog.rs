@@ -16,6 +16,7 @@ use servo::{
     FilePicker, PermissionRequest, PromptDialog, RgbColor, SelectElement, SelectElementOption,
     SelectElementOptionOrOptgroup, SimpleDialog,
 };
+use url::Url;
 
 /// The minimum width of many UI elements including dialog boxes and menus,
 /// for the sake of consistency.
@@ -55,10 +56,11 @@ pub enum Dialog {
     ContextMenu {
         menu: Option<ContextMenu>,
         toolbar_offset: Length<f32, DeviceIndependentPixel>,
+        page_url: Option<Url>,
     },
     SaveFile {
         dialog: EguiFileDialog,
-        url: url::Url,
+        url: Url,
         data: Vec<u8>,
     },
 }
@@ -662,6 +664,7 @@ impl Dialog {
             Dialog::ContextMenu {
                 menu,
                 toolbar_offset,
+                page_url,
             } => {
                 let mut is_open = true;
                 let mut next_dialog = None;
@@ -720,11 +723,35 @@ impl Dialog {
                                     }
                                 }
 
-                                // Add custom "Save As..." option for images or links
+                                // Add custom "Save As..." option for images, links or the page itself
                                 let info = context_menu.element_info();
-                                if let Some(url) = info.image_url.clone().or_else(|| info.link_url.clone()) {
+                                let save_url = info.image_url.clone().or_else(|| info.link_url.clone());
+                                let save_label = if info.image_url.is_some() {
+                                    "Save Image As..."
+                                } else if info.link_url.is_some() {
+                                    "Save Link As..."
+                                } else {
+                                    "Save As..."
+                                };
+
+                                if let Some(url) = save_url {
                                     ui.separator();
-                                    if ui.button("Save As...").clicked() {
+                                    if ui.button(save_label).clicked() {
+                                        if let Some(provider) =
+                                            crate::RESOURCE_DATA_PROVIDER.lock().unwrap().as_ref()
+                                        {
+                                            if let Some(data) = provider(&url) {
+                                                next_dialog = Some(Dialog::new_save_dialog(url, data));
+                                                return;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Always offer "Save Page As..." if we have the page URL
+                                if let Some(url) = page_url.clone() {
+                                    ui.separator();
+                                    if ui.button("Save Page As...").clicked() {
                                         if let Some(provider) =
                                             crate::RESOURCE_DATA_PROVIDER.lock().unwrap().as_ref()
                                         {
@@ -796,10 +823,12 @@ impl Dialog {
     pub(crate) fn new_context_menu(
         menu: ContextMenu,
         toolbar_offset: Length<f32, DeviceIndependentPixel>,
+        page_url: Option<Url>,
     ) -> Dialog {
         Dialog::ContextMenu {
             menu: Some(menu),
             toolbar_offset,
+            page_url,
         }
     }
 }

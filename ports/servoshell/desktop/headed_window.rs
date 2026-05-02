@@ -1077,7 +1077,7 @@ impl PlatformWindow for HeadedWindow {
         self.winit_window.has_focus()
     }
 
-    fn show_embedder_control(&self, webview_id: WebViewId, embedder_control: EmbedderControl) {
+    fn show_embedder_control(&self, webview_id: WebViewId, embedder_control: EmbedderControl, page_url: Option<Url>) {
         let control_id = embedder_control.id();
         match embedder_control {
             EmbedderControl::SelectElement(prompt) => {
@@ -1109,7 +1109,7 @@ impl PlatformWindow for HeadedWindow {
             },
             EmbedderControl::ContextMenu(prompt) => {
                 let offset = self.gui.borrow().toolbar_height();
-                self.add_dialog(webview_id, Dialog::new_context_menu(prompt, offset));
+                self.add_dialog(webview_id, Dialog::new_context_menu(prompt, offset, page_url));
             },
         }
     }

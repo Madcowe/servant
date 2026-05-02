@@ -39,6 +39,27 @@ impl AntProtocolHandler {
     }
 }
 
+fn is_renderable(mime: &str) -> bool {
+    let mime = mime.split(';').next().unwrap_or(mime).trim().to_lowercase();
+    matches!(
+        mime.as_str(),
+        "text/html"
+            | "text/css"
+            | "text/javascript"
+            | "application/javascript"
+            | "application/x-javascript"
+            | "text/plain"
+            | "image/png"
+            | "image/jpeg"
+            | "image/gif"
+            | "image/webp"
+            | "image/svg+xml"
+            | "application/json"
+            | "application/xml"
+            | "text/xml"
+    )
+}
+
 impl ProtocolHandler for AntProtocolHandler {
     fn load<'a>(
         &'a self,
@@ -123,27 +144,35 @@ impl ProtocolHandler for AntProtocolHandler {
             };
 
             let query: std::collections::HashMap<_, _> = url.as_url().query_pairs().collect();
-            let _is_raw = query.contains_key("servant_raw");
+            let is_raw = query.contains_key("servant_raw");
             let is_navigation = request.destination == Destination::Document;
 
-            // If it's a new document navigation and not cached, show the loading page.
-            // We ignore `is_raw` here to ensure shared URLs still show the loading progress.
-            if is_navigation && !self.resolver.is_cached(&ant_url.address) {
-                let resolver = self.resolver.clone();
-                let addr = ant_url.address;
-                let sub_path_opt = ant_url.sub_path.clone();
-                
-                tokio::spawn(async move {
-                    let sub_path = sub_path_opt.as_deref();
-                    let _ = resolver.resolve(&addr, sub_path).await;
-                });
+            // If it's a new document navigation, check if we should show the loading/choice page.
+            if is_navigation {
+                let cached_mime = self.resolver.get_cached_mime(&ant_url.address);
+                let should_show_loading = match cached_mime {
+                    None => true, // Not cached, definitely show loading.
+                    Some(mime) => !is_renderable(&mime) && !is_raw,
+                };
 
-                let mut response = Response::new(url, ResourceFetchTiming::new(timing_type));
-                *response.body.lock() = ResponseBody::Done(LOADING_HTML.as_bytes().to_vec());
-                if let Ok(hv) = HeaderValue::from_str("text/html") {
-                    response.headers.insert(http::header::CONTENT_TYPE, hv);
+                if should_show_loading {
+                    let resolver = self.resolver.clone();
+                    let addr = ant_url.address;
+                    let sub_path_opt = ant_url.sub_path.clone();
+                    
+                    // If not cached, start resolution. If cached, this will just return immediately.
+                    tokio::spawn(async move {
+                        let sub_path = sub_path_opt.as_deref();
+                        let _ = resolver.resolve(&addr, sub_path).await;
+                    });
+
+                    let mut response = Response::new(url, ResourceFetchTiming::new(timing_type));
+                    *response.body.lock() = ResponseBody::Done(LOADING_HTML.as_bytes().to_vec());
+                    if let Ok(hv) = HeaderValue::from_str("text/html") {
+                        response.headers.insert(http::header::CONTENT_TYPE, hv);
+                    }
+                    return response;
                 }
-                return response;
             }
 
             let sub_path = ant_url.sub_path.as_deref();
