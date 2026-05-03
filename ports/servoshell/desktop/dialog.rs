@@ -744,14 +744,16 @@ impl Dialog {
                                 // Add custom "Save As..." option for images or the page itself
                                 let info = context_menu.element_info();
                                 if let Some(url) = info.image_url.clone() {
-                                    ui.separator();
-                                    if ui.button("Save Image As...").clicked() {
-                                        if let Some(provider) =
-                                            crate::RESOURCE_DATA_PROVIDER.lock().unwrap().as_ref()
-                                        {
-                                            if let Some((data, mime)) = provider(&url) {
-                                                next_dialog = Some(Dialog::new_save_dialog(url, data, mime));
-                                                return;
+                                    if url.scheme() == "ant" {
+                                        ui.separator();
+                                        if ui.button("Save Image As...").clicked() {
+                                            if let Some(provider) =
+                                                crate::RESOURCE_DATA_PROVIDER.lock().unwrap().as_ref()
+                                            {
+                                                if let Some((data, mime)) = provider(&url) {
+                                                    next_dialog = Some(Dialog::new_save_dialog(url, data, mime));
+                                                    return;
+                                                }
                                             }
                                         }
                                     }
@@ -759,14 +761,16 @@ impl Dialog {
 
                                 // Always offer "Save Page As..." if we have the page URL
                                 if let Some(url) = page_url.clone() {
-                                    ui.separator();
-                                    if ui.button("Save Page As...").clicked() {
-                                        if let Some(provider) =
-                                            crate::RESOURCE_DATA_PROVIDER.lock().unwrap().as_ref()
-                                        {
-                                            if let Some((data, mime)) = provider(&url) {
-                                                next_dialog = Some(Dialog::new_save_dialog(url, data, mime));
-                                                return;
+                                    if url.scheme() == "ant" {
+                                        ui.separator();
+                                        if ui.button("Save Page As...").clicked() {
+                                            if let Some(provider) =
+                                                crate::RESOURCE_DATA_PROVIDER.lock().unwrap().as_ref()
+                                            {
+                                                if let Some((data, mime)) = provider(&url) {
+                                                    next_dialog = Some(Dialog::new_save_dialog(url, data, mime));
+                                                    return;
+                                                }
                                             }
                                         }
                                     }
