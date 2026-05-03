@@ -27,7 +27,7 @@ mod window;
  
 pub use crate::running_app_state::UserInterfaceCommand;
  
-pub type ResourceDataProvider = Box<dyn Fn(&url::Url) -> Option<Vec<u8>> + Send + Sync>;
+pub type ResourceDataProvider = Box<dyn Fn(&url::Url) -> Option<(Vec<u8>, String)> + Send + Sync>;
 pub static RESOURCE_DATA_PROVIDER: std::sync::Mutex<Option<ResourceDataProvider>> =
     std::sync::Mutex::new(None);
  

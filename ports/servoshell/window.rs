@@ -359,9 +359,9 @@ impl ServoShellWindow {
                 },
                 UserInterfaceCommand::Save(url) => {
                     if let Some(provider) = crate::RESOURCE_DATA_PROVIDER.lock().unwrap().as_ref() {
-                        if let Some(data) = provider(&url) {
+                        if let Some((data, mime)) = provider(&url) {
                             if let Some(webview) = self.active_webview() {
-                                self.platform_window.show_save_dialog(webview.id(), url, data);
+                                self.platform_window.show_save_dialog(webview.id(), url, data, mime);
                             }
                         }
                     }
@@ -436,7 +436,7 @@ pub(crate) trait PlatformWindow {
     fn show_permission_dialog(&self, _: WebViewId, _: PermissionRequest) {}
     fn show_http_authentication_dialog(&self, _: WebViewId, _: AuthenticationRequest) {}
 
-    fn show_save_dialog(&self, _webview_id: WebViewId, _url: Url, _data: Vec<u8>) {}
+    fn show_save_dialog(&self, _webview_id: WebViewId, _url: Url, _data: Vec<u8>, _mime: String) {}
  
     fn notify_input_event_handled(
         &self,

@@ -62,6 +62,7 @@ pub enum Dialog {
         dialog: EguiFileDialog,
         url: Url,
         data: Vec<u8>,
+        default_filename: String,
     },
 }
 
@@ -105,19 +106,36 @@ impl Dialog {
         }
     }
 
-    pub fn new_save_dialog(url: url::Url, data: Vec<u8>) -> Self {
+    pub fn new_save_dialog(url: url::Url, data: Vec<u8>, mime: String) -> Self {
         let mut dialog = EguiFileDialog::new();
-        // Try to guess filename from URL
-        let filename = url
+        
+        // Try to guess filename from URL path segments
+        let mut filename = url
             .path_segments()
             .and_then(|s| s.last())
             .filter(|s| !s.is_empty())
-            .unwrap_or("index.html");
+            .map(|s| s.to_string());
 
-        dialog.save_file();
-        let dialog = dialog.default_file_name(filename);
+        // If no filename in path, use the host (address)
+        if filename.is_none() {
+            filename = url.host_str().map(|s| s.to_string());
+        }
 
-        Dialog::SaveFile { dialog, url, data }
+        let mut filename = filename.unwrap_or_else(|| "Untitled".to_string());
+
+        // If the filename doesn't have an extension, try to add one from MIME
+        if !filename.contains('.') {
+            let ext = mime_to_ext(&mime);
+            filename = format!("{}.{}", filename, ext);
+        }
+
+        println!("Guessed filename: {} for URL: {}", filename, url);
+        Dialog::SaveFile { 
+            dialog, 
+            url, 
+            data,
+            default_filename: filename,
+        }
     }
 
     pub fn new_permission_request_dialog(permission_request: PermissionRequest) -> Self {
@@ -731,8 +749,8 @@ impl Dialog {
                                         if let Some(provider) =
                                             crate::RESOURCE_DATA_PROVIDER.lock().unwrap().as_ref()
                                         {
-                                            if let Some(data) = provider(&url) {
-                                                next_dialog = Some(Dialog::new_save_dialog(url, data));
+                                            if let Some((data, mime)) = provider(&url) {
+                                                next_dialog = Some(Dialog::new_save_dialog(url, data, mime));
                                                 return;
                                             }
                                         }
@@ -746,8 +764,8 @@ impl Dialog {
                                         if let Some(provider) =
                                             crate::RESOURCE_DATA_PROVIDER.lock().unwrap().as_ref()
                                         {
-                                            if let Some(data) = provider(&url) {
-                                                next_dialog = Some(Dialog::new_save_dialog(url, data));
+                                            if let Some((data, mime)) = provider(&url) {
+                                                next_dialog = Some(Dialog::new_save_dialog(url, data, mime));
                                                 return;
                                             }
                                         }
@@ -775,8 +793,11 @@ impl Dialog {
 
                 is_open
             },
-            Dialog::SaveFile { dialog, data, .. } => {
+            Dialog::SaveFile { dialog, data, default_filename, .. } => {
                 if *dialog.state() == DialogState::Closed {
+                    println!("Opening Save As dialog with default filename: {}", default_filename);
+                    *dialog = EguiFileDialog::new()
+                        .default_file_name(default_filename);
                     dialog.save_file();
                 }
 
@@ -832,4 +853,27 @@ fn make_dialog_label(message: &str, ui: &mut egui::Ui, input_text: Option<&mut S
         frame.content_ui.text_edit_singleline(input_text);
     }
     frame.end(ui);
+}
+
+fn mime_to_ext(mime: &str) -> &'static str {
+    let mime = mime.split(';').next().unwrap_or(mime).trim().to_lowercase();
+    match mime.as_str() {
+        "text/html" => "html",
+        "text/css" => "css",
+        "text/javascript" | "application/javascript" | "application/x-javascript" => "js",
+        "text/plain" => "txt",
+        "image/png" => "png",
+        "image/jpeg" => "jpg",
+        "image/gif" => "gif",
+        "image/webp" => "webp",
+        "image/svg+xml" => "svg",
+        "application/json" => "json",
+        "application/xml" | "text/xml" => "xml",
+        "application/pdf" => "pdf",
+        "application/zip" | "application/x-zip-compressed" => "zip",
+        "audio/mpeg" => "mp3",
+        "audio/ogg" => "ogg",
+        "video/mp4" => "mp4",
+        _ => "bin",
+    }
 }

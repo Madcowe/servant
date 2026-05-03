@@ -66,6 +66,15 @@ impl ContentResolver {
         })
     }
 
+    pub fn get_cached_content_for_url(&self, url: &url::Url) -> Option<(bytes::Bytes, String)> {
+        let ant_url = crate::ant_url::AntUrl::parse(url).ok()?;
+        let content = self.cache.get(&ant_url.address)?;
+        match &*content {
+            ResolvedContent::SingleFile { data, mime } => Some((data.clone(), mime.clone())),
+            ResolvedContent::RawChunk { data, mime } => Some((data.clone(), mime.clone())),
+        }
+    }
+
     pub fn get_cached_bytes_for_url(&self, url: &url::Url) -> Option<bytes::Bytes> {
         let ant_url = crate::ant_url::AntUrl::parse(url).ok()?;
         self.cache.get_bytes(&ant_url.address)

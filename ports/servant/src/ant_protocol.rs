@@ -93,7 +93,11 @@ impl ProtocolHandler for AntProtocolHandler {
             if let Ok(u) = url::Url::parse(&format!("ant://{}", address_hex)) {
                 if let Some(data) = self.resolver.get_cached_bytes_for_url(&u) {
                     let mut temp_path = env::temp_dir();
-                    temp_path.push(format!("servant_{}", address_hex));
+                    let filename = u.path_segments()
+                        .and_then(|s| s.last())
+                        .filter(|s| !s.is_empty())
+                        .unwrap_or(address_hex);
+                    temp_path.push(format!("servant_{}", filename));
                     if fs::write(&temp_path, data).is_ok() {
                         let _ = Command::new("xdg-open").arg(&temp_path).spawn();
                     }

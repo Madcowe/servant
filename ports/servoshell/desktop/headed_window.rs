@@ -1114,8 +1114,8 @@ impl PlatformWindow for HeadedWindow {
         }
     }
 
-    fn show_save_dialog(&self, webview_id: WebViewId, url: Url, data: Vec<u8>) {
-        self.add_dialog(webview_id, Dialog::new_save_dialog(url, data));
+    fn show_save_dialog(&self, webview_id: WebViewId, url: Url, data: Vec<u8>, mime: String) {
+        self.add_dialog(webview_id, Dialog::new_save_dialog(url, data, mime));
     }
 
     fn hide_embedder_control(&self, webview_id: WebViewId, embedder_control_id: EmbedderControlId) {

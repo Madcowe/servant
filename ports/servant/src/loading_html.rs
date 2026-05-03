@@ -50,7 +50,10 @@ pub const LOADING_HTML: &str = r#"
 
     <script>
         const address = window.location.hostname;
-        document.getElementById('address').innerText = 'ant://' + address;
+        const path = window.location.pathname;
+        const fullPath = address + (path === '/' ? '' : path);
+        
+        document.getElementById('address').innerText = 'ant://' + fullPath;
         
         const RENDERABLE_MIMES = [
             'text/html', 'text/css', 'text/javascript', 'application/javascript', 'application/x-javascript',
@@ -64,11 +67,11 @@ pub const LOADING_HTML: &str = r#"
         }
 
         function handleOpen() {
-            fetch('ant://system-open/' + address);
+            fetch('ant://system-open/' + fullPath);
         }
 
         function handleSave() {
-            fetch('ant://save-as/' + address);
+            fetch('ant://save-as/' + fullPath);
         }
 
         async function checkStatus() {

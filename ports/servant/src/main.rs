@@ -49,7 +49,7 @@ fn main() {
         // Provide a way for the UI to save files from the cache
         let resolver_clone = resolver.clone();
         servoshell::set_resource_data_provider(Box::new(move |url| {
-            resolver_clone.get_cached_bytes_for_url(url).map(|b| b.to_vec())
+            resolver_clone.get_cached_content_for_url(url).map(|(b, m)| (b.to_vec(), m))
         }));
             
         println!("ant:// protocol successfully registered.");
