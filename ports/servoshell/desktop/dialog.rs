@@ -723,20 +723,11 @@ impl Dialog {
                                     }
                                 }
 
-                                // Add custom "Save As..." option for images, links or the page itself
+                                // Add custom "Save As..." option for images or the page itself
                                 let info = context_menu.element_info();
-                                let save_url = info.image_url.clone().or_else(|| info.link_url.clone());
-                                let save_label = if info.image_url.is_some() {
-                                    "Save Image As..."
-                                } else if info.link_url.is_some() {
-                                    "Save Link As..."
-                                } else {
-                                    "Save As..."
-                                };
-
-                                if let Some(url) = save_url {
+                                if let Some(url) = info.image_url.clone() {
                                     ui.separator();
-                                    if ui.button(save_label).clicked() {
+                                    if ui.button("Save Image As...").clicked() {
                                         if let Some(provider) =
                                             crate::RESOURCE_DATA_PROVIDER.lock().unwrap().as_ref()
                                         {
