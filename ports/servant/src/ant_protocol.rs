@@ -19,6 +19,7 @@ use crate::settings::SettingsUi;
 use crate::ant_client::AntClientManager;
 use crate::loading_html::LOADING_HTML;
 use crate::loading::LoadingTracker;
+use crate::css_injection::INJECTED_CSS;
 use std::sync::Arc;
 use std::{fs, env};
 use std::process::Command;
@@ -184,7 +185,18 @@ impl ProtocolHandler for AntProtocolHandler {
                 Ok(ResolvedContent::SingleFile { data, mime }) | 
                 Ok(ResolvedContent::RawChunk { data, mime }) => {
                     let mut response = Response::new(url, ResourceFetchTiming::new(timing_type));
-                    *response.body.lock() = ResponseBody::Done(data.to_vec());
+                    let mut body = data.to_vec();
+
+                    if mime.split(';').next().unwrap_or(&mime).trim().to_lowercase() == "text/html" {
+                        // Inject loading indicator CSS for Autonomi images
+                        if let Some(pos) = body.windows(7).position(|w| w.eq_ignore_ascii_case(b"</head>")) {
+                            body.splice(pos..pos, INJECTED_CSS.as_bytes().iter().cloned());
+                        } else {
+                            body.extend_from_slice(INJECTED_CSS.as_bytes());
+                        }
+                    }
+
+                    *response.body.lock() = ResponseBody::Done(body);
                     if let Ok(hv) = HeaderValue::from_str(&mime) {
                         response.headers.insert(http::header::CONTENT_TYPE, hv);
                     }

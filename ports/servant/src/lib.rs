@@ -10,3 +10,4 @@ pub mod content_resolver;
 pub mod loading;
 pub mod loading_html;
 pub mod settings;
+pub mod css_injection;
