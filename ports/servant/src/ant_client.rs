@@ -51,6 +51,12 @@ impl AntClientManager {
                 .iter()
                 .filter_map(MultiAddr::socket_addr)
                 .collect()
+        } else if cfg!(target_os = "android") {
+            println!("Android environment detected. Skipping config dir search. Using {} hardcoded default peers.", DEFAULT_BOOTSTRAP_PEERS.len());
+            DEFAULT_BOOTSTRAP_PEERS
+                .iter()
+                .filter_map(|s| s.parse().ok())
+                .collect()
         } else {
             match ant_config::load_bootstrap_peers() {
                 Ok(Some(config_peers)) => {

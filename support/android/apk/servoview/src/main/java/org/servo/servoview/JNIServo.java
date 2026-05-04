@@ -14,7 +14,7 @@ import android.view.Surface;
 public class JNIServo {
     JNIServo() {
         System.loadLibrary("c++_shared");
-        System.loadLibrary("servoshell");
+        System.loadLibrary("servant");
     }
 
     public native String version();
