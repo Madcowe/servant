@@ -10,6 +10,11 @@ publish = false
 name = "servant"
 path = "src/main.rs"
 
+[lib]
+name = "servant"
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
 servo = { workspace = true }
 servoshell = { path = "../servoshell" }
@@ -31,3 +36,9 @@ serde_json = { workspace = true }
 futures = "0.3"
 clap = { version = "4.4", features = ["derive"] }
 toml = "0.8"
+
+[target.'cfg(target_os = "android")'.dependencies]
+android_logger = "0.15"
+jni = "0.21.1"
+lzma-sys = { version = "0.1", features = ["static"] }
+servoshell = { path = "../servoshell", features = ["tracing-hitrace"] }

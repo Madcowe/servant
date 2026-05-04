@@ -10508,6 +10508,7 @@ dependencies = [
 name = "servant"
 version = "0.1.0"
 dependencies = [
+ "android_logger",
  "ant-core",
  "bytes",
  "clap",
@@ -10515,8 +10516,10 @@ dependencies = [
  "futures",
  "hex 0.4.3",
  "http 1.4.0",
+ "jni 0.21.1",
  "lazy_static",
  "log",
+ "lzma-sys",
  "mime_guess",
  "self_encryption",
  "serde",

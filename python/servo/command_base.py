@@ -353,6 +353,13 @@ class CommandBase(object):
         binary_path = path.join(base_path, build_type.directory_name(), binary_name)
 
         if not path.exists(binary_path):
+            # Fallback for servant port
+            if self.target.is_cross_build():
+                servant_binary = "libservant.so"
+                servant_path = path.join(base_path, build_type.directory_name(), servant_binary)
+                if path.exists(servant_path):
+                    return servant_path
+
             raise BuildNotFound("No Servo binary found. Perhaps you forgot to run `./mach build`?")
 
         return binary_path

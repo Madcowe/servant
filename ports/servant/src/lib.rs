@@ -11,3 +11,6 @@ pub mod loading;
 pub mod loading_html;
 pub mod settings;
 pub mod css_injection;
+
+#[cfg(target_os = "android")]
+pub mod android;

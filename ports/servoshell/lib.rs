@@ -42,6 +42,14 @@ pub fn set_resource_data_provider(provider: ResourceDataProvider) {
     PENDING_UI_COMMANDS.lock().unwrap().push(command);
 }
 
+pub type ProtocolRegistryCallback = Box<dyn FnOnce(&mut servo::protocol_handler::ProtocolRegistry) + Send>;
+pub static PROTOCOL_REGISTRY_CALLBACK: std::sync::Mutex<Option<ProtocolRegistryCallback>> =
+    std::sync::Mutex::new(None);
+
+pub fn set_protocol_registry_callback(callback: ProtocolRegistryCallback) {
+    *PROTOCOL_REGISTRY_CALLBACK.lock().unwrap() = Some(callback);
+}
+
 pub mod platform {
     #[cfg(target_os = "macos")]
     pub use crate::platform::macos::deinit;
@@ -217,6 +225,7 @@ cfg_if! {
                     }
                 });
 
+                #[cfg(target_env = "ohos")]
                 hitrace::start_trace_ex(
                     (*event.metadata().level()).into(),
                     &std::ffi::CString::new(event.metadata().name())
@@ -225,6 +234,7 @@ cfg_if! {
                         .expect("Failed to convert str to CString"),
                 );
 
+                #[cfg(target_env = "ohos")]
                 hitrace::finish_trace();
             }
 

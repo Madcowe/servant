@@ -25,6 +25,7 @@ struct Args {
     url: Option<String>,
 }
 
+#[cfg(not(any(target_os = "android", target_env = "ohos")))]
 fn main() {
     let args = Args::parse();
     println!("Servant initializing with UI...");
@@ -55,3 +56,6 @@ fn main() {
         println!("ant:// protocol successfully registered.");
     });
 }
+
+#[cfg(any(target_os = "android", target_env = "ohos"))]
+fn main() {}

@@ -18,5 +18,5 @@ MY_LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 LOCAL_PATH := $(SERVO_TARGET_DIR)
 LOCAL_MODULE := servojni
-LOCAL_SRC_FILES := libservoshell.so
+LOCAL_SRC_FILES := $(if $(wildcard $(LOCAL_PATH)/libservant.so),libservant.so,libservoshell.so)
 include $(PREBUILT_SHARED_LIBRARY)

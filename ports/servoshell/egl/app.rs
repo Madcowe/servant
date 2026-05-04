@@ -173,7 +173,7 @@ impl PlatformWindow for EmbeddedPlatformWindow {
         )
     }
 
-    fn show_embedder_control(&self, _: WebViewId, embedder_control: EmbedderControl) {
+    fn show_embedder_control(&self, _: WebViewId, embedder_control: EmbedderControl, _: Option<Url>) {
         let control_id = embedder_control.id();
         match embedder_control {
             EmbedderControl::InputMethod(input_method_control) => {
@@ -278,9 +278,15 @@ pub struct App {
 #[expect(unused)]
 impl App {
     pub(super) fn new(init: AppInitOptions) -> Rc<Self> {
+        let mut protocol_registry = servo::protocol_handler::ProtocolRegistry::default();
+        if let Some(callback) = crate::PROTOCOL_REGISTRY_CALLBACK.lock().unwrap().take() {
+            callback(&mut protocol_registry);
+        }
+
         let mut servo_builder = ServoBuilder::default()
             .opts(init.opts)
             .preferences(init.preferences.clone())
+            .protocol_registry(protocol_registry)
             .event_loop_waker(init.event_loop_waker.clone());
         #[cfg(feature = "webxr")]
         let servo_builder = servo_builder
