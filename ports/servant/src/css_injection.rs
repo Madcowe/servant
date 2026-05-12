@@ -8,7 +8,7 @@ pub const INJECTED_CSS: &str = r#"
         0% { background-position: 150% 0; }
         100% { background-position: -150% 0; }
     }
-    img[src^="ant://"] { 
+    img[src^="ant://"], img[src^="autonomi://"] { 
         background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
         background-size: 200% 100%;
         animation: ant-shimmer 2s infinite linear;

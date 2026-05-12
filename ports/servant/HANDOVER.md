@@ -49,6 +49,7 @@ Initially, the browser failed to fetch content with `Error: InsufficientPeers("D
 **The Fix:**
 *   Implemented prioritized bootstrap resolution: CLI `--bootstrap-peers` > `--devnet-manifest` > `~/.config/ant/bootstrap_peers.toml` > Hardcoded mainnet defaults.
 *   Forced **IPv4-only mode** and increased network operation timeouts to **60 seconds** to match the behavior of working Autonomi CLI utilities.
+*   **Android Compatibility:** The `ant_core` SDK crashes (SIGSEGV) on Android when searching for `~/.config/ant` via `dirs::config_dir()`. On Android targets, we explicitly bypass the config directory search and fall back exclusively to the hardcoded mainnet defaults.
 
 ### 3. Autonomi Runtime Lifecycle (Instant Fetch Failure)
 Even with peers, fetches were failing instantly (~80ms).

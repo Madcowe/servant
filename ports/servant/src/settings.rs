@@ -8,6 +8,7 @@ use net_traits::{ResourceFetchTiming};
 use net_traits::http_status::HttpStatus;
 use http::header::HeaderValue;
 
+#[derive(Clone)]
 pub struct SettingsUi {}
 
 impl SettingsUi {

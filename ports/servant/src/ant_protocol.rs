@@ -24,6 +24,7 @@ use std::sync::Arc;
 use std::{fs, env};
 use std::process::Command;
 
+#[derive(Clone)]
 pub struct AntProtocolHandler {
     resolver: ContentResolver,
     settings_ui: SettingsUi,
@@ -81,7 +82,8 @@ impl ProtocolHandler for AntProtocolHandler {
 
         if url.as_url().host_str() == Some("save-as") {
             let address_hex = url.as_url().path().trim_start_matches('/');
-            if let Ok(u) = url::Url::parse(&format!("ant://{}", address_hex)) {
+            let scheme = url.as_url().scheme();
+            if let Ok(u) = url::Url::parse(&format!("{}://{}", scheme, address_hex)) {
                 servoshell::queue_ui_command(servoshell::UserInterfaceCommand::Save(u));
             }
             let response = Response::new(url, ResourceFetchTiming::new(timing_type));
@@ -91,7 +93,8 @@ impl ProtocolHandler for AntProtocolHandler {
 
         if url.as_url().host_str() == Some("system-open") {
             let address_hex = url.as_url().path().trim_start_matches('/');
-            if let Ok(u) = url::Url::parse(&format!("ant://{}", address_hex)) {
+            let scheme = url.as_url().scheme();
+            if let Ok(u) = url::Url::parse(&format!("{}://{}", scheme, address_hex)) {
                 if let Some(data) = self.resolver.get_cached_bytes_for_url(&u) {
                     let mut temp_path = env::temp_dir();
                     let filename = u.path_segments()
@@ -143,7 +146,7 @@ impl ProtocolHandler for AntProtocolHandler {
                 Ok(u) => u,
                 Err(e) => {
                     return Response::network_error(NetworkError::ResourceLoadError(
-                        format!("Invalid ant:// URL: {:?}", e)
+                        format!("Invalid {}:// URL: {:?}", url.as_url().scheme(), e)
                     ));
                 }
             };

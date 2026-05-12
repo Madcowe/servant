@@ -43,9 +43,12 @@ fn main() {
         let cache = Arc::new(ContentCache::new(100)); // LRU cache up to 100 entries
         let resolver = ContentResolver::new(ant_manager.client(), cache);
 
-        // Register ant:// protocol
-        protocols.register("ant", AntProtocolHandler::new(resolver.clone(), ant_manager))
+        // Register ant:// and autonomi:// protocols
+        let handler = AntProtocolHandler::new(resolver.clone(), ant_manager);
+        protocols.register("ant", handler.clone())
             .expect("Failed to register ant:// protocol handler");
+        protocols.register("autonomi", handler)
+            .expect("Failed to register autonomi:// protocol handler");
 
         // Provide a way for the UI to save files from the cache
         let resolver_clone = resolver.clone();
@@ -53,7 +56,7 @@ fn main() {
             resolver_clone.get_cached_content_for_url(url).map(|(b, m)| (b.to_vec(), m))
         }));
             
-        println!("ant:// protocol successfully registered.");
+        println!("ant:// and autonomi:// protocols successfully registered.");
     });
 }
 

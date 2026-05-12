@@ -20,7 +20,7 @@ pub struct AntUrl {
 
 impl AntUrl {
     pub fn parse(url: &Url) -> Result<Self, AntUrlError> {
-        if url.scheme() != "ant" {
+        if url.scheme() != "ant" && url.scheme() != "autonomi" {
             return Err(AntUrlError::InvalidScheme);
         }
 

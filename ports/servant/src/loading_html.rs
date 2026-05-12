@@ -53,7 +53,7 @@ pub const LOADING_HTML: &str = r#"
         const path = window.location.pathname;
         const fullPath = address + (path === '/' ? '' : path);
         
-        document.getElementById('address').innerText = 'ant://' + fullPath;
+        document.getElementById('address').innerText = window.location.protocol + '//' + fullPath;
         
         const RENDERABLE_MIMES = [
             'text/html', 'text/css', 'text/javascript', 'application/javascript', 'application/x-javascript',
@@ -67,16 +67,16 @@ pub const LOADING_HTML: &str = r#"
         }
 
         function handleOpen() {
-            fetch('ant://system-open/' + fullPath);
+            fetch(window.location.protocol + '//system-open/' + fullPath);
         }
 
         function handleSave() {
-            fetch('ant://save-as/' + fullPath);
+            fetch(window.location.protocol + '//save-as/' + fullPath);
         }
 
         async function checkStatus() {
             try {
-                const response = await fetch('ant://loading-status/' + address);
+                const response = await fetch(window.location.protocol + '//loading-status/' + address);
                 const data = await response.json();
                 
                 document.getElementById('status').innerText = data.status;

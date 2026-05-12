@@ -744,7 +744,7 @@ impl Dialog {
                                 // Add custom "Save As..." option for images or the page itself
                                 let info = context_menu.element_info();
                                 if let Some(url) = info.image_url.clone() {
-                                    if url.scheme() == "ant" {
+                                    if url.scheme() == "ant" || url.scheme() == "autonomi" {
                                         ui.separator();
                                         if ui.button("Save Image As...").clicked() {
                                             if let Some(provider) =
@@ -761,7 +761,7 @@ impl Dialog {
 
                                 // Always offer "Save Page As..." if we have the page URL
                                 if let Some(url) = page_url.clone() {
-                                    if url.scheme() == "ant" {
+                                    if url.scheme() == "ant" || url.scheme() == "autonomi" {
                                         ui.separator();
                                         if ui.button("Save Page As...").clicked() {
                                             if let Some(provider) =

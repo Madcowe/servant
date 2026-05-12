@@ -38,9 +38,14 @@ pub extern "C" fn JNI_OnLoad(_vm: JavaVM, _reserved: *mut c_void) -> jint {
         let cache = Arc::new(ContentCache::new(100));
         let resolver = ContentResolver::new(ant_manager.client(), cache);
 
-        // Register ant:// protocol
-        if let Err(e) = protocols.register("ant", AntProtocolHandler::new(resolver.clone(), ant_manager)) {
+        // Register ant:// and autonomi:// protocols
+        let handler = AntProtocolHandler::new(resolver.clone(), ant_manager);
+        if let Err(e) = protocols.register("ant", handler.clone()) {
             error!("Failed to register ant:// protocol handler: {:?}", e);
+            return;
+        }
+        if let Err(e) = protocols.register("autonomi", handler) {
+            error!("Failed to register autonomi:// protocol handler: {:?}", e);
             return;
         }
 
@@ -50,7 +55,7 @@ pub extern "C" fn JNI_OnLoad(_vm: JavaVM, _reserved: *mut c_void) -> jint {
             resolver_clone.get_cached_content_for_url(url).map(|(b, m)| (b.to_vec(), m))
         }));
 
-        info!("ant:// protocol successfully registered on Android.");
+        info!("ant:// and autonomi:// protocols successfully registered on Android.");
     }));
 
     jni::sys::JNI_VERSION_1_6
