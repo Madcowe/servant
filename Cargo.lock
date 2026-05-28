@@ -1041,7 +1041,7 @@ dependencies = [
 
 [[package]]
 name = "ant-core"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "ant-protocol",
  "async-stream",
@@ -1061,7 +1061,7 @@ dependencies = [
  "reqwest 0.12.28",
  "rmp-serde",
  "self-replace",
- "self_encryption",
+ "self_encryption 0.36.0",
  "semver 1.0.28",
  "serde",
  "serde_json",
@@ -1092,9 +1092,9 @@ dependencies = [
 
 [[package]]
 name = "ant-protocol"
-version = "2.0.3"
+version = "2.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "edaf05019466da9ff9055dbbc1428db3414440a8f0a1ac929febcf4fb0608a6d"
+checksum = "a4d0ba3f671c08a1d52291b601ec35a7353f4f4e10f221b5f0ee372d154636dd"
 dependencies = [
  "blake3",
  "bytes",
@@ -9686,9 +9686,9 @@ dependencies = [
 
 [[package]]
 name = "saorsa-core"
-version = "0.24.2"
+version = "0.24.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "03e194874b524ad2a50d0976eb4ebcb81aea326dfb475373de9a2942a90cb2cc"
+checksum = "0c1267928da1bcc91748c314f95f7952bc01c0359a4ac70a0b111b0386898934"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -9801,9 +9801,9 @@ dependencies = [
 
 [[package]]
 name = "saorsa-transport"
-version = "0.34.1"
+version = "0.34.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31ebc09fb51e2c325e61ff09892f1256c60ef4f3beb881fd2980befe3e53e9bc"
+checksum = "852400712537856ab6fec5293be4290daf0130df0dbcb249a6e8280f9257665f"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -10082,6 +10082,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "self_encryption"
+version = "0.36.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "47ab904569f88dcbde4f0feadb693c184577dc81e8243f96bb725e72a779c637"
+dependencies = [
+ "bincode",
+ "blake3",
+ "brotli 3.3.4",
+ "bytes",
+ "chacha20poly1305",
+ "hex 0.4.3",
+ "rand 0.8.5",
+ "rand_chacha 0.3.1",
+ "rayon",
+ "serde",
+ "tempfile",
+ "thiserror 1.0.69",
+ "tokio",
+ "xor_name",
+]
+
+[[package]]
 name = "semver"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -10279,7 +10301,7 @@ dependencies = [
 
 [[package]]
 name = "servant"
-version = "0.1.0"
+version = "0.2.1"
 dependencies = [
  "android_logger",
  "ant-core",
@@ -10294,7 +10316,7 @@ dependencies = [
  "log",
  "lzma-sys",
  "mime_guess",
- "self_encryption",
+ "self_encryption 0.35.0",
  "serde",
  "serde_json",
  "servo",

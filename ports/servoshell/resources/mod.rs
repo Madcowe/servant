@@ -56,6 +56,13 @@ fn resource_root_dir_path() -> PathBuf {
 
     cfg_if! {
         if #[cfg(servo_production)] {
+            #[cfg(feature = "baked-in-resources")]
+            {
+                let fallback = env::current_exe().unwrap().parent().unwrap().to_path_buf();
+                *dir = Some(fallback.clone());
+                return fallback;
+            }
+            #[cfg(not(feature = "baked-in-resources"))]
             panic!("Can't find resources directory")
         } else {
             // Static assert that this is really a non-production build, rather
@@ -81,6 +88,13 @@ fn resource_root_dir_path() -> PathBuf {
                         *dir = Some(dev_fallback.clone());
                         return dev_fallback;
                     }
+                    #[cfg(feature = "baked-in-resources")]
+                    {
+                        let fallback = env::current_exe().unwrap().parent().unwrap().to_path_buf();
+                        *dir = Some(fallback.clone());
+                        return fallback;
+                    }
+                    #[cfg(not(feature = "baked-in-resources"))]
                     panic!("Can't find resources directory")
                 }
             }

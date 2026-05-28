@@ -22,6 +22,21 @@ use tokio::sync::mpsc::unbounded_channel;
 #[derive(Default)]
 pub struct ResourceProtocolHandler {}
 
+#[cfg(feature = "baked-in-resources")]
+fn get_baked_in_resource(path: &str) -> Option<&'static [u8]> {
+    match path {
+        "config.css" => Some(include_bytes!("../../../../resources/resource_protocol/config.css")),
+        "config.html" => Some(include_bytes!("../../../../resources/resource_protocol/config.html")),
+        "license.html" => Some(include_bytes!("../../../../resources/resource_protocol/license.html")),
+        "newtab.css" => Some(include_bytes!("../../../../resources/resource_protocol/newtab.css")),
+        "newtab.html" => Some(include_bytes!("../../../../resources/resource_protocol/newtab.html")),
+        "preferences.html" => Some(include_bytes!("../../../../resources/resource_protocol/preferences.html")),
+        "servo-color-negative-no-container.svg" => Some(include_bytes!("../../../../resources/resource_protocol/servo-color-negative-no-container.svg")),
+        "servo-color-positive-no-container.svg" => Some(include_bytes!("../../../../resources/resource_protocol/servo-color-positive-no-container.svg")),
+        _ => None,
+    }
+}
+
 impl ResourceProtocolHandler {
     pub fn response_for_path(
         request: &mut Request,
@@ -42,6 +57,18 @@ impl ResourceProtocolHandler {
                 NetworkError::ResourceLoadError("Invalid path".to_owned()),
             )));
         };
+
+        #[cfg(feature = "baked-in-resources")]
+        if let Some(bytes) = get_baked_in_resource(path) {
+            let mut response = Response::new(
+                request.current_url(),
+                ResourceFetchTiming::new(request.timing_type()),
+            );
+            let mime = mime_guess::from_path(path).first_or_octet_stream();
+            response.headers.typed_insert(ContentType::from(mime));
+            *response.body.lock() = ResponseBody::Done(bytes.to_vec());
+            return Box::pin(std::future::ready(response));
+        }
 
         let file_path = crate::resources::resource_protocol_dir_path().join(path);
 
