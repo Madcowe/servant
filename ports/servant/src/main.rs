@@ -27,6 +27,7 @@ struct Args {
 
 #[cfg(not(any(target_os = "android", target_env = "ohos")))]
 fn main() {
+    init_dlls();
     let args = Args::parse();
     println!("Servant initializing with UI...");
 
@@ -60,5 +61,46 @@ fn main() {
     });
 }
 
+#[cfg(target_os = "windows")]
+fn init_dlls() {
+    use std::fs;
+    use std::path::PathBuf;
+    use std::os::windows::ffi::OsStrExt;
+
+    let egl_bytes = include_bytes!(concat!(env!("OUT_DIR"), "/libEGL.dll"));
+    let gles_bytes = include_bytes!(concat!(env!("OUT_DIR"), "/libGLESv2.dll"));
+
+    let temp_dir = std::env::temp_dir().join("servant-egl-libs");
+    fs::create_dir_all(&temp_dir).ok();
+
+    let egl_path = temp_dir.join("libEGL.dll");
+    let gles_path = temp_dir.join("libGLESv2.dll");
+
+    let write_if_needed = |path: &PathBuf, bytes: &[u8]| {
+        if !path.exists() || fs::metadata(path).map(|m| m.len() != bytes.len() as u64).unwrap_or(true) {
+            fs::write(path, bytes).ok();
+        }
+    };
+
+    write_if_needed(&egl_path, egl_bytes);
+    write_if_needed(&gles_path, gles_bytes);
+
+    let mut path_u16: Vec<u16> = temp_dir.as_os_str().encode_wide().collect();
+    path_u16.push(0);
+
+    #[link(name = "kernel32")]
+    unsafe extern "system" {
+        fn SetDllDirectoryW(lpPathName: *const u16) -> i32;
+    }
+
+    unsafe {
+        SetDllDirectoryW(path_u16.as_ptr());
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn init_dlls() {}
+
 #[cfg(any(target_os = "android", target_env = "ohos"))]
 fn main() {}
+

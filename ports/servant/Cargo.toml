@@ -42,3 +42,7 @@ android_logger = "0.15"
 jni = "0.21.1"
 lzma-sys = { version = "0.1", features = ["static"] }
 servoshell = { path = "../servoshell", features = ["tracing-hitrace"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+mozangle = { workspace = true }
+

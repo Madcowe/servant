@@ -1041,11 +1041,12 @@ dependencies = [
 
 [[package]]
 name = "ant-core"
-version = "0.2.4"
+version = "0.2.6"
 dependencies = [
  "ant-protocol",
  "async-stream",
  "axum",
+ "blake3",
  "bytes",
  "flate2",
  "fs2",
@@ -10316,6 +10317,7 @@ dependencies = [
  "log",
  "lzma-sys",
  "mime_guess",
+ "mozangle",
  "self_encryption 0.35.0",
  "serde",
  "serde_json",
